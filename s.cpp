@@ -1,5 +1,6 @@
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <cstring>
 #include <cstdlib>
 using namespace std;
@@ -68,7 +69,7 @@ public:
 		}
 		return r;
 	}
-	bool cut_by(PG_flag &in)
+	bool cut_by(PG_flag &in, PG_flag &in2)
 	{
 		bool r = false;
 		for (int i = 0; i < 9; i++)
@@ -76,11 +77,14 @@ public:
 			if (in.data[i] && data[i])
 			{
 				data[i] = false;
+				in2[i] = true;
+				cout << "set" << endl;
 				r = true;
 			}
 		}
 		return r;
 	}
+
 	bool operator ==(PG_flag &in)
 	{
 		for (int i = 0; i < 9; i++)
@@ -142,12 +146,14 @@ public:
 			dfs(a, b, 0, i);
 	}
 };
+
 class PG_stat
 {
 public:
 	int data[9][9];
 	PG_flag flag[9][9];
 	int debug_flag[9][9];
+	PG_flag debug_flag_2[9][9];
 	void init()
 	{
 		memset(data, 0, sizeof(data));
@@ -163,7 +169,11 @@ public:
 			}
 		}
 	}
-	void clear_debug_flag() {memset(debug_flag, 0, sizeof(debug_flag));}
+	void clear_debug_flag()
+	{
+		memset(debug_flag, 0, sizeof(debug_flag));
+		memset(debug_flag_2, 0, sizeof(debug_flag_2));
+	}
 	int left()
 	{
 		int r = 0;
@@ -288,6 +298,62 @@ public:
 		fout << "</table>" << endl;
 		fout.close();
 	}
+	string to_html()
+	{
+		ostringstream fout;
+		
+		fout << "<table border=\"1\">" << endl;
+		for (int i = 0; i < 9; i++)
+		{
+			fout << "	<tr>" << endl;
+			for (int j = 0; j < 9; j++)
+			{
+				int ti = i/3;
+				int tj = j/3;
+				bool background = false;
+				if ( (tj == 0 || tj == 2) && (ti == 0 || ti == 2)) background = true;
+				if ( ti == 1 && tj == 1) background = true;
+				if (debug_flag[i][j])
+					fout << "		<td class=\"debug_" << debug_flag[i][j] << "\">" << endl;
+				else if (background)
+					fout << "		<td class=\"background\">" << endl;
+				else
+					fout << "		<td>" << endl;
+					
+				if (data[i][j])
+				{
+					fout << "			<span style=\"font-size:2em\">" << data[i][j] << "</span>" << endl;
+				}
+				else
+				{
+					for (int k = 0; k < 9; k++)
+					{
+						fout << "&nbsp;";
+
+						if (debug_flag_2[i][j][k])
+						{
+							fout << "<span class=\"flag_debug_" << debug_flag_2[i][j][k] << "\">" << endl; 
+						}
+
+						if (flag[i][j][k])
+							fout << k+1;
+						else
+							fout << "&nbsp;";
+
+						if (debug_flag_2[i][j][k])
+								fout << "</span>" << endl;
+						if (k % 3 == 2)fout << "<br/>";
+					}
+				}
+				fout << endl;
+				fout << "		</td>" << endl;
+			}
+			fout << "	</tr>" << endl;
+		}
+		fout << "</table>" << endl;
+		//fout.close();
+		return fout.str();
+	}
 	void eliminate(int x, int y, int z)
 	{
 		if (z < 1 || z > 9){ cout << "error at eliminate" << endl; exit(1);}
@@ -329,6 +395,28 @@ public:
 
 	}
 };
+
+class PG_html
+{
+public:
+	ofstream fout;
+	int count;
+	PG_html(string fn)
+	{
+		count = 0;
+		fout.open(fn.data());
+		fout << "<link href=\"sudoku.css\" type=\"text/css\" rel=\"Stylesheet\" />" << endl;
+	}
+	void add_stat(PG_stat &target, string msg)
+	{
+		count++;
+		fout << "<div id=\"sudoku_" << count << "\">" << endl;
+		fout << "<h2>" << msg << "</h2>" << endl;
+		fout << target.to_html() << endl;
+		fout << "</div>" << endl;
+	}
+};
+PG_html HTML("PG.html");
 class PG_sudoku
 {
 public:
@@ -604,7 +692,8 @@ public:
 							// we find that a(area1) is false, but b(area2) is true.
 							// fix it and print msg.
 							target.debug_flag[ty][tx] = 3;
-							target.flag_to_html("locked.html");
+							//target.flag_to_html("locked.html");
+							HTML.add_stat(target, "locked test");
 							target.flag[ty][tx][j] = false;
 							cout << "[locked_candidates_" << msg << "] at point " << in_x << " " << in_y << endl;
 							cout << "clear (" << tx << "," << ty << ")_" << j << endl;
@@ -637,7 +726,7 @@ public:
 	}
 	void locked_candidates(PG_stat &target)
 	{
-		target.flag_to_html("test.html");
+		//target.flag_to_html("test.html");
 		for (int i = 0; i < 9; i++)
 		{
 			for (int j = 0; j < 9; j +=3 )
@@ -666,15 +755,21 @@ public:
 			{
 				cout << "detect at" << a_x << " " << a_y << " " << b_x << " " << b_y << endl;
 				bool modified = false;
+				target.clear_debug_flag();
+				target.debug_flag[a_y][a_x] = 1;
+				target.debug_flag[b_y][b_x] = 1;
+				PG_stat tmp = target;
 				for (int j = 0; j < 9; j++)
 				{
-
 					if (j == C_9_2.data[i][0]-1 || j == C_9_2.data[i][1]-1) continue;
-					//cout << "before " << target.flag[ in_y[j] ][ in_x[j] ] << endl;
-					modified |= target.flag[ in_y[j] ][ in_x[j] ].cut_by(a);
-					//cout << "after " << target.flag[ in_y[j] ][ in_x[j] ] << endl;
+					bool tmp_flag = target.flag[ in_y[j] ][ in_x[j] ].cut_by(a, target.debug_flag_2[ in_y[j] ][ in_x[j] ]);
+					modified |= tmp_flag;
 				}
-				if (modified) return true;	
+				if (modified)
+				{
+					HTML.add_stat(target, "naked2");
+					return true;	
+				} 
 			}
 		}
 		return false;
