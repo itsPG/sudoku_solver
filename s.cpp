@@ -78,7 +78,20 @@ public:
 			{
 				data[i] = false;
 				in2[i] = true;
-				cout << "set" << endl;
+				r = true;
+			}
+		}
+		return r;
+	}
+	bool cut_by__inv(PG_flag &in, PG_flag &in2)
+	{
+		bool r = false;
+		for (int i = 0; i < 9; i++)
+		{
+			if (in.data[i] == false && data[i])
+			{
+				data[i] = false;
+				in2[i] = true;
 				r = true;
 			}
 		}
@@ -414,6 +427,10 @@ public:
 		fout << "<h2>" << msg << "</h2>" << endl;
 		fout << target.to_html() << endl;
 		fout << "</div>" << endl;
+	}
+	void add_msg(string msg)
+	{
+		fout << "<h3>" << msg << "</h3>" << endl;
 	}
 };
 PG_html HTML("PG.html");
@@ -753,7 +770,6 @@ public:
 
 			if (ca == 2 && cb == 2 && a == b)
 			{
-				cout << "detect at" << a_x << " " << a_y << " " << b_x << " " << b_y << endl;
 				bool modified = false;
 				target.clear_debug_flag();
 				target.debug_flag[a_y][a_x] = 1;
@@ -767,7 +783,74 @@ public:
 				}
 				if (modified)
 				{
-					HTML.add_stat(target, "naked2");
+					HTML.add_stat(target, "naked_pairs");
+					return true;	
+				} 
+			}
+		}
+		return false;
+	}
+	bool hidden_naked_pairs_unit(PG_stat &target, int in_x[9], int in_y[9])
+	{
+		target.clear_debug_flag();
+		PG_stat target2 = target;
+		int count[9] = {0};
+		for (int i = 0; i < 9; i++) // for each in_?
+		{
+			for (int j = 0; j < 9; j++) // for each number
+			{
+				if (target2.flag[ in_y[i] ][ in_x[i] ][j])
+					count[j]++;
+			}
+		}
+		for (int i = 0; i < 9; i++) //for each number
+		{
+			if (count[i] > 2)
+			{
+				for (int j = 0; j < 9; j++) // for each in_?
+				{
+					target2.flag[ in_y[j] ][ in_x[j] ][i] = false;
+					target2.debug_flag_2[ in_y[j] ][ in_x[j] ][i] = 1;
+				}
+			}
+		}
+
+		//HTML.add_stat(target, "before_hidden_naked_pairs");
+		//HTML.add_stat(target2, "after_hidden_naked_pairs");
+		for (int i = 1; i <= C_9_2.max; i++)
+		{
+			//choose 2 numbers by C(9,2)
+			int a_x = in_x[C_9_2.data[i][0] - 1];
+			int a_y = in_y[C_9_2.data[i][0] - 1];
+			int b_x = in_x[C_9_2.data[i][1] - 1];
+			int b_y = in_y[C_9_2.data[i][1] - 1];
+			PG_flag &a = target2.flag[a_y][a_x];
+			PG_flag &b = target2.flag[b_y][b_x];
+
+			//count the available number size
+			int ca = a.size();
+			int cb = b.size();
+
+			if (ca == 2 && cb == 2 && a == b)
+			{
+				//HTML.add_stat(target, "before detect");
+				HTML.add_stat(target2, "detect at");
+				//bool modified = false;
+				target.clear_debug_flag();
+				target.debug_flag[a_y][a_x] = 1;
+				target.debug_flag[b_y][b_x] = 1;
+				bool modified = false;
+				PG_stat tmp = target;
+				{
+					bool tmp_flag = target.flag[ a_y ][ a_x ].cut_by__inv(a, target.debug_flag_2[ a_y ][ a_x ]);
+					modified |= tmp_flag;
+					tmp_flag = target.flag[ b_y ][ b_x ].cut_by__inv(a, target.debug_flag_2[ b_y ][ b_x ]);
+					modified |= tmp_flag;
+				}
+				if (modified)
+				{
+					cout << "success!!!!!!!!!!!!!!!!" << endl;
+					HTML.add_stat(target, "hidden_naked_pairs");
 					return true;	
 				} 
 			}
@@ -787,7 +870,7 @@ public:
 				in_y[j] = i;
 				in_x[j] = j;
 			}
-			if (naked_pairs_unit(target, in_x, in_y))
+			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
 				cout << "[naked pairs ] find pair at row " << i << endl;
 				return;
@@ -799,14 +882,14 @@ public:
 				in_y[j] = j;
 				in_x[j] = i;
 			}
-			if (naked_pairs_unit(target, in_x, in_y))
+			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
 				cout << "[naked pairs] find pair at column " << i << endl;
 				return;
 			}
 
 			pick_grid(i, in_x, in_y);
-			if (naked_pairs_unit(target, in_x, in_y))
+			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
 				cout << "[naked pairs ] find pair at grid " << i << endl;
 				return;
