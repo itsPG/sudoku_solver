@@ -247,16 +247,25 @@ public:
 	void flag_to_html(string fn)
 	{
 		ofstream fout(fn.data());
+		fout << "<link href=\"sudoku.css\" type=\"text/css\" rel=\"Stylesheet\" />" << endl;
 		fout << "<table border=\"1\">" << endl;
 		for (int i = 0; i < 9; i++)
 		{
 			fout << "	<tr>" << endl;
 			for (int j = 0; j < 9; j++)
 			{
+				int ti = i/3;
+				int tj = j/3;
+				bool background = false;
+				if ( (tj == 0 || tj == 2) && (ti == 0 || ti == 2)) background = true;
+				if ( ti == 1 && tj == 1) background = true;
 				if (debug_flag[i][j])
-					fout << "		<td>" << endl;
-				else
 					fout << "		<td class=\"debug_" << debug_flag[i][j] << "\">" << endl;
+				else if (background)
+					fout << "		<td class=\"background\">" << endl;
+				else
+					fout << "		<td>" << endl;
+					
 				if (data[i][j])
 				{
 					fout << "			<span style=\"font-size:2em\">" << data[i][j] << "</span>" << endl;
@@ -473,23 +482,12 @@ public:
 		}
 
 	}
-	void locked_candidates_row_picker()
+	void locked_candidates_row_picker(int in_x, int in_y, int area_x[2][6], int area_y[2][6])
 	{
-
-	}
-	bool locked_candidates_row(int in_x, int in_y, PG_stat &target)
-	{
-		//cout << "call " << in_x << " " << in_y << endl;
 		int sx = in_x - in_x % 3;
 		int sy = in_y - in_y % 3;
 		int x1 = in_x, x2 = in_x + 1, x3 = in_x + 2;
-		
-		bool t[9] = {0};
-		int area_x[2][6], area_y[2][6];
-		bool area_flag[2][9];
 		int ptr;
-
-		bool flag = false;
 
 		ptr = -1;
 		for (int i = 0; i < 9; i++) // prepare area1
@@ -500,6 +498,7 @@ public:
 				ptr++;
 				area_x[0][ptr] = i;
 				area_y[0][ptr] = in_y;
+
 			}
 		}
 
@@ -515,24 +514,66 @@ public:
 				area_y[1][ptr] = i;
 			}
 		}
-		//for (int i = 0; i < 6; i++)cout << area_x[0][i] << " " << area_y[0][i] << endl;
-		//cout << "//////////" << endl;
-		//for (int i = 0; i < 6; i++)cout << area_x[1][i] << " " << area_y[1][i] << endl;
+	}
+	void locked_candidates_column_picker(int in_x, int in_y, int area_x[2][6], int area_y[2][6])
+	{
+		int sx = in_x - in_x % 3;
+		int sy = in_y - in_y % 3;
+		int y1 = in_y, y2 = in_y + 1, y3 = in_y + 2;
+		int ptr;
 
-		//cout << "area_flag" << endl;
+		ptr = -1;
+		for (int i = 0; i < 9; i++) // prepare area1
+		{
+			if (i != y1 && i != y2 && i != y3)
+			{
+				//cout << "set area1" << endl;
+				ptr++;
+				area_x[0][ptr] = in_x;
+				area_y[0][ptr] = i;
+
+			}
+		}
+
+		ptr = -1;
+		for (int i = sy; i < sy+ 3; i++) //prepare area 2
+		{
+			
+			for (int j = sx; j < sx + 3; j++)
+			{
+				if (j == in_x) continue;
+
+				ptr++;
+				area_x[1][ptr] = j;
+				area_y[1][ptr] = i;
+			}
+		}
+	}
+	bool locked_candidates_unit(int in_x, int in_y, PG_stat &target, int area_x[2][6], int area_y[2][6], bool area_flag[2][9], string msg)
+	{
+		if (msg != "row" && msg != "column"){cout << "msg err @ locked_candidates_unit" << endl; system("pause");}
+		int sx = in_x - in_x % 3;
+		int sy = in_y - in_y % 3;
+		int x1 = in_x, x2 = in_x + 1, x3 = in_x + 2;
+		int y1 = in_y, y2 = in_y + 1, y3 = in_y + 2;
+		bool flag = false;
+
 		memset(area_flag, 0, sizeof(area_flag));
+		target.clear_debug_flag();
+
 		for (int i = 0; i < 9; i++) // find the union in area 1, 2 respectively
 		{
 			for (int j = 0; j < 6; j++)
 			{
 				int tx0 = area_x[0][j], ty0 = area_y[0][j];
 				int tx1 = area_x[1][j], ty1 = area_y[1][j];
-				if (i == 2)cout << tx0 << " " << ty0 << " " << target.flag[ty0][tx0][i] << endl;
-				if (i == 2)cout << tx1 << " " << ty1 << " " << target.flag[ty1][tx1][i] <<endl;
+				target.debug_flag[ty0][tx0] = 1;
+				target.debug_flag[ty1][tx1] = 2;
 				area_flag[0][i] |= target.flag[ty0][tx0][i];
 				area_flag[1][i] |= target.flag[ty1][tx1][i];
 			}
 		}
+		//target.flag_to_html("locked2.html");
 		for (int i = 0; i < 2; i ++) // area 1, 2 respectively
 		{
 			// let's assume a = area1, b = area2;
@@ -541,9 +582,18 @@ public:
 			{
 				if (area_flag[a][j] == false) // if j dosen't appear in area 1 , so should area 2.
 				{
-					if (target.flag[in_y][x1][j] == false && 
-						target.flag[in_y][x2][j] == false &&
-						target.flag[in_y][x3][j] == false) continue;
+					if (msg == "row")
+					{
+						if (target.flag[in_y][x1][j] == false && 
+							target.flag[in_y][x2][j] == false &&
+							target.flag[in_y][x3][j] == false) continue;
+					}
+					if (msg == "column")
+					{
+						if (target.flag[y1][in_x][j] == false && 
+							target.flag[y2][in_x][j] == false &&
+							target.flag[y3][in_x][j] == false) continue;
+					}
 					cout << "area " << i << " / " << j << " is false" << endl;
 					for (int k = 0; k < 6; k++) // for each point in area 2.
 					{
@@ -553,17 +603,36 @@ public:
 						{
 							// we find that a(area1) is false, but b(area2) is true.
 							// fix it and print msg.
-							
+							target.debug_flag[ty][tx] = 3;
+							target.flag_to_html("locked.html");
 							target.flag[ty][tx][j] = false;
-							cout << "[locked_candidates] at point " << in_x << " " << in_y << endl;
+							cout << "[locked_candidates_" << msg << "] at point " << in_x << " " << in_y << endl;
 							cout << "clear (" << tx << "," << ty << ")_" << j << endl;
 							flag = true;
+							system("pause");
 						}
 					}
 				}
 			}
 		}
-		//system("pause");
+		return flag;
+	}
+	bool locked_candidates_main(int in_x, int in_y, PG_stat &target)
+	{
+		int sx = in_x - in_x % 3;
+		int sy = in_y - in_y % 3;
+		int x1 = in_x, x2 = in_x + 1, x3 = in_x + 2;
+		int area_x[2][6], area_y[2][6];
+		bool area_flag[2][9];
+		int ptr;
+
+		bool flag = false;
+		
+		locked_candidates_row_picker(in_x, in_y, area_x, area_y);
+		flag |= locked_candidates_unit(in_x, in_y, target, area_x, area_y, area_flag, "row");
+		if (flag) return true;
+		locked_candidates_column_picker(in_x, in_y, area_x, area_y);
+		flag |= locked_candidates_unit(in_x, in_y, target, area_x, area_y, area_flag, "column");
 		return flag;
 	}
 	void locked_candidates(PG_stat &target)
@@ -573,7 +642,7 @@ public:
 		{
 			for (int j = 0; j < 9; j +=3 )
 			{
-				if (locked_candidates_row(j, i, target)) return;
+				if (locked_candidates_main(j, i, target)) return;
 			}
 		}
 	}
