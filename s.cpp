@@ -937,6 +937,8 @@ public:
 	}
 	bool naked_triples_unit(PG_stat &target, int in_x[9], int in_y[9])
 	{
+		
+
 		for (int i = 1; i <= C_9_3.max; i++)
 		{
 			
@@ -979,6 +981,116 @@ public:
 					{
 						HTML.add_stat(target, "naked_triples");
 					}
+				}
+			}
+		}
+		return false;
+	}
+	bool hidden_naked_triples_unit(PG_stat &target, int in_x[9], int in_y[9])
+	{
+		target.clear_debug_flag();
+		PG_stat target2 = target;
+		int count[9] = {0};
+		for (int i = 0; i < 9; i++) target2.debug_flag[ in_y[i] ][ in_x[i] ] = 1;
+		for (int i = 0; i < 9; i++) // for each in_?
+		{
+			for (int j = 0; j < 9; j++) // for each number
+			{
+				if (target2.flag[ in_y[i] ][ in_x[i] ][j])
+					count[j]++;
+			}
+		}
+		bool clean_flag = false;
+		for (int i = 0; i < 9; i++) //for each number
+		{
+			if (count[i] > 3)
+			{
+				for (int j = 0; j < 9; j++) // for each in_?
+				{
+					clean_flag = true;
+					cout << "clean " << in_x[j] << " " << in_y[j] << endl;
+					target2.flag[ in_y[j] ][ in_x[j] ][i] = false;
+					target2.debug_flag_2[ in_y[j] ][ in_x[j] ][i] = 1;
+				}
+			}
+		}
+		if (clean_flag)
+		{
+			//HTML.add_stat(target, "test ori");
+			//HTML.add_stat(target2, "test");
+		}
+		//system("pause");
+		for (int i = 1; i <= C_9_3.max; i++)
+		{
+			
+			//choose 3 numbers by C(9,3)
+			int a_x = in_x[C_9_3.data[i][0] - 1];
+			int a_y = in_y[C_9_3.data[i][0] - 1];
+			int b_x = in_x[C_9_3.data[i][1] - 1];
+			int b_y = in_y[C_9_3.data[i][1] - 1];
+			int c_x = in_x[C_9_3.data[i][2] - 1];
+			int c_y = in_y[C_9_3.data[i][2] - 1];
+			if (target.data[a_y][a_x] != 0) continue;
+			if (target.data[b_y][b_x] != 0) continue;
+			if (target.data[c_y][c_x] != 0) continue;
+			PG_flag &a = target2.flag[a_y][a_x];
+			PG_flag &b = target2.flag[b_y][b_x];
+			PG_flag &c = target2.flag[c_y][c_x];
+			PG_flag d = a | b | c ;
+			//count the available number size
+			int ca = a.size();
+			int cb = b.size();
+			int cc = c.size();
+			int cd = d.size();
+
+			if (cd <= 3)
+			{
+				PG_flag &a0 = target.flag[a_y][a_x];
+				PG_flag &b0 = target.flag[b_y][b_x];
+				PG_flag &c0 = target.flag[c_y][c_x];
+				PG_flag d0 = a0 | b0 | c0;
+				if (d0.size() != cd)continue;
+				target.clear_debug_flag();
+				//target2.clear_debug_flag();
+				bool failed = false;
+				for (int j = 0; j < 9; j++) // for each in_x
+				{
+					int tx = in_x[j];
+					int ty = in_y[j];
+					if (ty == a_y && tx == a_x) continue;
+					if (ty == b_y && tx == b_x) continue;
+					if (ty == c_y && tx == c_x) continue;
+					PG_flag tmp = d & target.flag[ ty ][ tx ];
+					if (tmp.size() != 0)
+					{
+						failed = true;
+						break;
+					}
+				}
+				if (failed) continue;
+				target.debug_flag[a_y][a_x] = 2;
+				target.debug_flag[b_y][b_x] = 2;
+				target.debug_flag[c_y][c_x] = 2;
+				ostringstream sout;
+				sout << d;
+				HTML.add_msg(sout.str());
+				HTML.add_stat(target2, "dd");
+				HTML.add_stat(target, "DDetect triples");
+				bool modified = false;
+				PG_stat tmp = target;
+				{
+					bool tmp_flag = target.flag[ a_y ][ a_x ].cut_by__inv(d, target.debug_flag_2[ a_y ][ a_x ]);
+					modified |= tmp_flag;
+					tmp_flag = target.flag[ b_y ][ b_x ].cut_by__inv(d, target.debug_flag_2[ b_y ][ b_x ]);
+					modified |= tmp_flag;
+					tmp_flag = target.flag[ c_y ][ c_x ].cut_by__inv(d, target.debug_flag_2[ c_y ][ c_x ]);
+					modified |= tmp_flag;
+				}
+				if (modified)
+				{
+					HTML.add_msg("D is " + sout.str());
+					HTML.add_stat(target2, "AA");
+					HTML.add_stat(target, "HIDDEN NAKED TRIPLES");
 				}
 			}
 		}
@@ -1027,6 +1139,49 @@ public:
 		return false;
 
 	}
+	bool hidden_naked_triples(PG_stat &target)
+	{
+		int ptr, in_x[9], in_y[9];
+
+		/* pick row */
+		for (int i = 0; i < 9; i++)
+		{
+			target.clear_debug_flag();
+			for (int j = 0; j < 9; j++)
+			{
+				in_x[j] = j;
+				in_y[j] = i;
+				target.debug_flag[i][j] = 1;
+			}
+			bool tmp = hidden_naked_triples_unit(target, in_x, in_y);
+			if (tmp)
+			{
+				HTML.add_stat(target, "naked triples row");
+				return true;
+			}
+		}
+
+		/* pick column */
+		for (int i = 0; i < 9; i++)
+		{
+			target.clear_debug_flag();
+			for (int j = 0; j < 9; j++)
+			{
+				in_x[j] = i;
+				in_y[j] = j;
+				target.debug_flag[j][i] = 1;
+			}
+			bool tmp = hidden_naked_triples_unit(target, in_x, in_y);
+			if (tmp)
+			{
+				HTML.add_stat(target, "naked triples column");
+				return true;
+			}
+		}
+
+		return false;
+
+	}
 	void left_debug()
 	{
 		for (int i = 0; i < 9; i++)
@@ -1058,7 +1213,7 @@ public:
 			//refresh(ori);
 			//locked_candidates(ori);
 			//naked_pairs(ori);
-			naked_triples(ori);
+			hidden_naked_triples(ori);
 			//naked_triples(ori);
 		}
 		ori.show();
