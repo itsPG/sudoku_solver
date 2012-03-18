@@ -870,12 +870,50 @@ public:
 				in_y[j] = i;
 				in_x[j] = j;
 			}
-			if (hidden_naked_pairs_unit(target, in_x, in_y))
+			if (naked_pairs_unit(target, in_x, in_y))
 			{
 				cout << "[naked pairs ] find pair at row " << i << endl;
 				return;
 			}
+			/* pick column*/
+			for (int j = 0; j < 9; j++)
+			{
+				in_y[j] = j;
+				in_x[j] = i;
+			}
+			if (naked_pairs_unit(target, in_x, in_y))
+			{
+				cout << "[naked pairs] find pair at column " << i << endl;
+				return;
+			}
+			/* pick grid*/
+			pick_grid(i, in_x, in_y);
+			if (naked_pairs_unit(target, in_x, in_y))
+			{
+				cout << "[naked pairs ] find pair at grid " << i << endl;
+				return;
+			}
+		}
 
+	}
+	void hidden_naked_pairs(PG_stat &target)
+	{
+		int in_x[9], in_y[9];
+
+		
+		for (int i = 0; i < 9; i++)
+		{
+			/* pick row*/
+			for (int j = 0; j < 9; j++)
+			{
+				in_y[j] = i;
+				in_x[j] = j;
+			}
+			if (hidden_naked_pairs_unit(target, in_x, in_y))
+			{
+				cout << "[hidden naked pairs ] find pair at row " << i << endl;
+				return;
+			}
 			/* pick column*/
 			for (int j = 0; j < 9; j++)
 			{
@@ -884,107 +922,111 @@ public:
 			}
 			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
-				cout << "[naked pairs] find pair at column " << i << endl;
+				cout << "[hidden naked pairs] find pair at column " << i << endl;
 				return;
 			}
-
+			/* pick grid*/
 			pick_grid(i, in_x, in_y);
 			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
-				cout << "[naked pairs ] find pair at grid " << i << endl;
+				cout << "[hidden naked pairs ] find pair at grid " << i << endl;
 				return;
 			}
 		}
+		
 	}
-	/*
-	bool naked_triples_unit()
+	bool naked_triples_unit(PG_stat &target, int in_x[9], int in_y[9])
 	{
 		for (int i = 1; i <= C_9_3.max; i++)
 		{
+			
 			//choose 3 numbers by C(9,3)
-			bool *a = triple[C_9_3.data[i][0] - 1];
-			bool *b = triple[C_9_3.data[i][1] - 1];
-			bool *c = triple[C_9_3.data[i][2] - 1];
-
+			int a_x = in_x[C_9_3.data[i][0] - 1];
+			int a_y = in_y[C_9_3.data[i][0] - 1];
+			int b_x = in_x[C_9_3.data[i][1] - 1];
+			int b_y = in_y[C_9_3.data[i][1] - 1];
+			int c_x = in_x[C_9_3.data[i][2] - 1];
+			int c_y = in_y[C_9_3.data[i][2] - 1];
+			if (target.data[a_y][a_x] != 0) continue;
+			if (target.data[b_y][b_x] != 0) continue;
+			if (target.data[c_y][c_x] != 0) continue;
+			PG_flag &a = target.flag[a_y][a_x];
+			PG_flag &b = target.flag[b_y][b_x];
+			PG_flag &c = target.flag[c_y][c_x];
+			PG_flag d = a | b | c ;
 			//count the available number size
-			int ca = 0; for (int j = 0; j < 9; j++) if(a[j]) ca++;
-			int cb = 0; for (int j = 0; j < 9; j++) if(b[j]) cb++;
-			int cc = 0; for (int j = 0; j < 9; j++) if(c[j]) cc++;
+			int ca = a.size();
+			int cb = b.size();
+			int cc = c.size();
+			int cd = d.size();
 
-
-			if ((ca == 2 || ca == 3) && (cb == 2 || cb == 3) && (cc == 2 || cc == 3))
+			if (cd <= 3)
 			{
-				bool t[9];
-				int tmp = 0;
-
-				// find the union
+				target.debug_flag[a_y][a_x] = 2;
+				target.debug_flag[b_y][b_x] = 2;
+				target.debug_flag[c_y][c_x] = 2;
+				HTML.add_stat(target, "detect triples");
+				bool modified = false;
 				for (int j = 0; j < 9; j++)
-				{ 
-					t[j] = a[j] | b[j] | c[j];
-					if (t[j]) tmp++;
-				}
-
-				//if the union size <=3
-				if (tmp <= 3)
 				{
-					bool flag = 0;
-					triple_final[0] = C_9_3.data[i][0] - 1;
-					triple_final[1] = C_9_3.data[i][1] - 1;
-					triple_final[2] = C_9_3.data[i][2] - 1;
-					for (int j = 0; j < 9; j++) // for each number(1~9)
+					int tx = in_x[j], ty = in_y[j];
+					if (tx == a_x && ty == a_y) continue;
+					if (tx == b_x && ty == b_y) continue;
+					if (tx == c_x && ty == c_y) continue;
+					bool flag_tmp = target.flag[ty][tx].cut_by(d, target.debug_flag_2[ty][tx]);
+					modified |= flag_tmp;
+					if (flag_tmp)
 					{
-						if (t[j]) // if this number is in the triples
-						{
-							for (int k = 0; k < 9; k++) 
-							{
-								if (triple[k] != a  &&  triple[k] != b  &&  triple[k] != c)
-								{
-									if (triple[k][j])
-									{
-										flag = 1;
-										triple[k][j] = 0; // eliminate them !
-										//cout << "eliminate number " << j << endl;
-									}
-								}
-
-							}
-						}
+						HTML.add_stat(target, "naked_triples");
 					}
-					if (flag) return true;	
 				}
 			}
 		}
 		return false;
 	}
-	void naked_triples(PG_stat &target)
+	bool naked_triples(PG_stat &target)
 	{
+		int ptr, in_x[9], in_y[9];
+
+		/* pick row */
 		for (int i = 0; i < 9; i++)
 		{
+			target.clear_debug_flag();
 			for (int j = 0; j < 9; j++)
 			{
-				triple[j] = target.flag[j][i];
+				in_x[j] = j;
+				in_y[j] = i;
+				target.debug_flag[i][j] = 1;
 			}
-			if (naked_triples_unit())
+			bool tmp = naked_triples_unit(target, in_x, in_y);
+			if (tmp)
 			{
-				cout << "[naked triples ] find triple at column " << i << endl;
-				//cout << "find triple at " << triple_final[0] << " " 
-				//<< triple_final[1] << " " << triple_final[2] << endl;
-					     
-			}
-			for (int j = 0; j < 9; j++)
-			{
-				triple[j] = target.flag[i][j];
-			}
-			if (naked_triples_unit())
-			{
-				cout << "[naked triples] find triple at row " << i << endl;
-				//cout << "find triple at " << triple_final[0] << " " 
-				//<< triple_final[1] << " " << triple_final[2] << endl;
-					     
+				HTML.add_stat(target, "naked triples row");
+				return true;
 			}
 		}
+
+		/* pick column */
+		for (int i = 0; i < 9; i++)
+		{
+			target.clear_debug_flag();
+			for (int j = 0; j < 9; j++)
+			{
+				in_x[j] = i;
+				in_y[j] = j;
+				target.debug_flag[j][i] = 1;
+			}
+			bool tmp = naked_triples_unit(target, in_x, in_y);
+			if (tmp)
+			{
+				HTML.add_stat(target, "naked triples column");
+				return true;
+			}
+		}
+
+		return false;
+
 	}
-	*/
 	void left_debug()
 	{
 		for (int i = 0; i < 9; i++)
@@ -1014,8 +1056,9 @@ public:
 			cout << limit << " / left: " << ori.left() << endl; 
 			single_candidature(ori);
 			//refresh(ori);
-			locked_candidates(ori);
-			naked_pairs(ori);
+			//locked_candidates(ori);
+			//naked_pairs(ori);
+			naked_triples(ori);
 			//naked_triples(ori);
 		}
 		ori.show();
