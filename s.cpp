@@ -1015,6 +1015,7 @@ public:
 					if (t[ chosen[i] ]) place[j] = true; 
 				}
 			}
+			cout << place << endl;
 			if (place.size() <= 3) // if those numbers appears at less than 3 place
 			{
 
@@ -1034,6 +1035,9 @@ public:
 						int ty = in_y[i];
 						modified |= target.flag[ty][tx].cut_by__inv(tmp, target.debug_flag_2[ty][tx]);
 						target.debug_flag[ty][tx] = 2;
+						ostringstream sout;
+						sout << ty << " " << tx << endl;
+						HTML.add_msg(sout.str());
 					}
 				}
 				if (modified)
@@ -1064,42 +1068,56 @@ public:
 			target.debug_flag[j][column] = 1;
 		}
 	}
+	void naked_triples_grid_picker(PG_stat &target, int in_x[9], int in_y[9], int grid) // grid: 0~8
+	
+	{
+		target.clear_debug_flag();
+		int sx = (grid % 3) * 3;
+		int sy = (grid / 3) * 3;
+		int ptr = -1;
+		for (int i = sy; i < sy + 3; i++)
+		{
+			for (int j = sx; j < sx + 3; j++)
+			{
+				ptr++;
+				in_x[ptr] = j;
+				in_y[ptr] = i;
+				target.debug_flag[i][j] = 1;
+			}
+		}
+	}
 	bool naked_triples_main(PG_stat &target, int mode) // mode1: normal , mode2: hidden
 	{
 		int ptr, in_x[9], in_y[9];
+		for (int k = 0; k < 2; k++)
+		{
 
-		/* pick row */
-		for (int i = 0; i < 9; i++)
-		{
-			naked_triples_row_picker(target, in_x, in_y, i);
-			bool tmp;
-			if (mode == 1)
-				naked_triples_unit(target, in_x, in_y);
-			else if (mode == 2)
-				hidden_naked_triples_unit(target, in_x, in_y);
-			else
-				cout << "!!!ERROR!!! at naked_triples_main" << endl;
-			if (tmp)
+			for (int i = 0; i < 9; i++)
 			{
-				HTML.add_stat(target, "naked triples row");
-				return true;
-			}
-		}
-		/* pick column */
-		for (int i = 0; i < 9; i++)
-		{
-			naked_triples_row_picker(target, in_x, in_y, i);
-			bool tmp;
-			if (mode == 1)
-				naked_triples_unit(target, in_x, in_y);
-			else if (mode == 2)
-				hidden_naked_triples_unit(target, in_x, in_y);
-			else
-				cout << "!!!ERROR!!! at naked_triples_main" << endl;
-			if (tmp)
-			{
-				HTML.add_stat(target, "naked triples column");
-				return true;
+				if (k == 0)
+					naked_triples_row_picker(target, in_x, in_y, i);
+				else if (k == 1)
+					naked_triples_column_picker(target, in_x, in_y, i);
+				else if (k == 2)
+					naked_triples_grid_picker(target, in_x, in_y, i);
+				else
+					cout << "!!!ERROR!! at naked_triples_main" << endl;
+
+				bool tmp;
+
+				if (mode == 1)
+					naked_triples_unit(target, in_x, in_y);
+				else if (mode == 2)
+					hidden_naked_triples_unit(target, in_x, in_y);
+				else
+					cout << "!!!ERROR!!! at naked_triples_main" << endl;
+
+				if (tmp)
+				{
+					HTML.add_stat(target, "naked triples row");
+					cout << "[triples]" << endl;
+					return true;
+				}
 			}
 		}
 		return false;
@@ -1110,6 +1128,7 @@ public:
 	}
 	bool hidden_naked_triples(PG_stat &target)
 	{
+		HTML.add_stat(target, "ori");
 		return naked_triples_main(target, 2);
 	}
 	void left_debug()
@@ -1140,7 +1159,6 @@ public:
 			if (limit <= 0) break;
 			cout << limit << " / left: " << ori.left() << endl; 
 			single_candidature(ori);
-			//refresh(ori);
 			//locked_candidates(ori);
 			//naked_pairs(ori);
 			hidden_naked_triples(ori);
