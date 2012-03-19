@@ -1015,12 +1015,14 @@ public:
 				for (int j = 0; j < 9; j++)
 				{
 					PG_flag &t = target.flag[ in_y[j] ][ in_x[j] ];
-					if (t[i]) place[j] = true; 
+					if (t[ chosen[i] ]) place[j] = true; 
 				}
 			}
 			if (place.size() <= 3) // if those numbers appears at less than 3 place
 			{
+
 				target.clear_debug_flag();
+				for (int i = 0; i < 9 ;i++) target.debug_flag[ in_y[i] ][ in_x[i] ] = 1;
 				//PG_stat target2 = target;
 				PG_flag tmp; // tmp is used for cut
 				tmp[ chosen[0] ] = true;
@@ -1034,7 +1036,7 @@ public:
 						int tx = in_x[i];
 						int ty = in_y[i];
 						modified |= target.flag[ty][tx].cut_by__inv(tmp, target.debug_flag_2[ty][tx]);
-
+						target.debug_flag[ty][tx] = 2;
 					}
 				}
 				if (modified)
@@ -1095,7 +1097,7 @@ public:
 		/* pick row */
 		for (int i = 0; i < 9; i++)
 		{
-			target.clear_debug_flag();
+			//target.clear_debug_flag();
 			for (int j = 0; j < 9; j++)
 			{
 				in_x[j] = j;
