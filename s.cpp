@@ -267,50 +267,6 @@ public:
 			cout << endl;
 		}
 	}
-	void flag_to_html(string fn)
-	{
-		ofstream fout(fn.data());
-		fout << "<link href=\"sudoku.css\" type=\"text/css\" rel=\"Stylesheet\" />" << endl;
-		fout << "<table border=\"1\">" << endl;
-		for (int i = 0; i < 9; i++)
-		{
-			fout << "	<tr>" << endl;
-			for (int j = 0; j < 9; j++)
-			{
-				int ti = i/3;
-				int tj = j/3;
-				bool background = false;
-				if ( (tj == 0 || tj == 2) && (ti == 0 || ti == 2)) background = true;
-				if ( ti == 1 && tj == 1) background = true;
-				if (debug_flag[i][j])
-					fout << "		<td class=\"debug_" << debug_flag[i][j] << "\">" << endl;
-				else if (background)
-					fout << "		<td class=\"background\">" << endl;
-				else
-					fout << "		<td>" << endl;
-					
-				if (data[i][j])
-				{
-					fout << "			<span style=\"font-size:2em\">" << data[i][j] << "</span>" << endl;
-				}
-				else
-				{
-					for (int k = 0; k < 9; k++)
-					{
-						fout << "&nbsp;";
-						if (flag[i][j][k])fout << k+1;
-						else fout << "&nbsp;";
-						if (k % 3 == 2)fout << "<br/>";
-					}
-				}
-				fout << endl;
-				fout << "		</td>" << endl;
-			}
-			fout << "	</tr>" << endl;
-		}
-		fout << "</table>" << endl;
-		fout.close();
-	}
 	string to_html()
 	{
 		ostringstream fout;
@@ -506,6 +462,7 @@ public:
 				}
 			}
 			/* unique end */
+
 			for (int k = 1; k <= 9 && !key; k++)
 			{
 				/* grid erase start */
@@ -599,7 +556,6 @@ public:
 		{
 			if (i != x1 && i != x2 && i != x3)
 			{
-				//cout << "set area1" << endl;
 				ptr++;
 				area_x[0][ptr] = i;
 				area_y[0][ptr] = in_y;
@@ -613,7 +569,6 @@ public:
 			if (i == in_y) continue;
 			for (int j = sx; j < sx + 3; j++)
 			{
-				//cout << "set area2 " << endl;
 				ptr++;
 				area_x[1][ptr] = j;
 				area_y[1][ptr] = i;
@@ -632,7 +587,6 @@ public:
 		{
 			if (i != y1 && i != y2 && i != y3)
 			{
-				//cout << "set area1" << endl;
 				ptr++;
 				area_x[0][ptr] = in_x;
 				area_y[0][ptr] = i;
@@ -678,7 +632,6 @@ public:
 				area_flag[1][i] |= target.flag[ty1][tx1][i];
 			}
 		}
-		//target.flag_to_html("locked2.html");
 		for (int i = 0; i < 2; i ++) // area 1, 2 respectively
 		{
 			// let's assume a = area1, b = area2;
@@ -743,7 +696,6 @@ public:
 	}
 	void locked_candidates(PG_stat &target)
 	{
-		//target.flag_to_html("test.html");
 		for (int i = 0; i < 9; i++)
 		{
 			for (int j = 0; j < 9; j +=3 )
@@ -815,8 +767,6 @@ public:
 			}
 		}
 
-		//HTML.add_stat(target, "before_hidden_naked_pairs");
-		//HTML.add_stat(target2, "after_hidden_naked_pairs");
 		for (int i = 1; i <= C_9_2.max; i++)
 		{
 			//choose 2 numbers by C(9,2)
@@ -833,9 +783,6 @@ public:
 
 			if (ca == 2 && cb == 2 && a == b)
 			{
-				//HTML.add_stat(target, "before detect");
-				HTML.add_stat(target2, "detect at");
-				//bool modified = false;
 				target.clear_debug_flag();
 				target.debug_flag[a_y][a_x] = 1;
 				target.debug_flag[b_y][b_x] = 1;
@@ -849,7 +796,6 @@ public:
 				}
 				if (modified)
 				{
-					cout << "success!!!!!!!!!!!!!!!!" << endl;
 					HTML.add_stat(target, "hidden_naked_pairs");
 					return true;	
 				} 
@@ -964,7 +910,6 @@ public:
 				target.debug_flag[a_y][a_x] = 2;
 				target.debug_flag[b_y][b_x] = 2;
 				target.debug_flag[c_y][c_x] = 2;
-				HTML.add_stat(target, "detect triples");
 				bool modified = false;
 				for (int j = 0; j < 9; j++)
 				{
@@ -1157,21 +1102,26 @@ public:
 	void solve()
 	{
 		init_input(ori);
-		int limit = 3;
+		int limit = 50;
 		while (ori.left() > 0)
 		{
 			limit--;
 			if (limit <= 0) break;
 			cout << limit << " / left: " << ori.left() << endl; 
 			single_candidature(ori);
-			//locked_candidates(ori);
-			//naked_pairs(ori);
+			locked_candidates(ori);
+
+			naked_pairs(ori);
+			hidden_naked_pairs(ori);
+
+			naked_triples(ori);
 			hidden_naked_triples(ori);
-			//naked_triples(ori);
+
 		}
 		ori.show();
 		//left_debug();
 		ori.count_debug();
+		HTML.add_stat(ori, "FINAL");
 	}
 };
 int main()
