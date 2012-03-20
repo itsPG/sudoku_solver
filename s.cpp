@@ -614,7 +614,10 @@ public:
 		int y1 = in_y, y2 = in_y + 1, y3 = in_y + 2;
 		bool flag = false;
 
-		memset(area_flag, 0, sizeof(area_flag));
+		//memset(area_flag, 0, sizeof(area_flag)); (god damm it...............)
+		for (int i = 0; i < 2; i++)
+			for (int j = 0; j < 9; j++)
+				area_flag[i][j] = false;
 		target.clear_debug_flag();
 		target.debug_flag[in_y][in_x] = 3;
 		for (int i = 0; i < 9; i++) // find the union in area 1, 2 respectively
@@ -629,19 +632,13 @@ public:
 				area_flag[1][i] |= target.flag[ty1][tx1][i];
 			}
 		}
-		//HTML.add_stat(target, "debug");
+
 		for (int i = 0; i < 2; i ++) // area 1, 2 respectively
 		{
 			// let's assume a = area1, b = area2;
 			int a = i, b = 1 - i;
 			for (int j = 0; j < 9; j++) // check each number
 			{
-				ostringstream sout;
-				sout << j << " area_flag "; 
-				for (int k = 0; k < 6; k++) sout << area_flag[0][k] << "-";
-				for (int k = 0; k < 6; k++) sout << area_flag[1][k] << "-";
-				sout << endl;
-				HTML.add_stat(target, sout.str());
 				if (area_flag[a][j] == false) // if j dosen't appear in area 1 , so should area 2.
 				{
 
@@ -669,7 +666,6 @@ public:
 							// we find that a(area1) is false, but b(area2) is true.
 							// fix it and print msg.
 							target.debug_flag[ty][tx] = 3;
-							//target.flag_to_html("locked.html");
 							HTML.add_stat(target, "locket candidates");
 							target.flag[ty][tx][j] = false;
 							cout << "[locked_candidates_" << msg << "] at point " << in_x << " " << in_y << endl;
@@ -695,7 +691,6 @@ public:
 		
 		if (mode == 1)
 		{
-			//HTML.add_stat(target, "row");
 			locked_candidates_row_picker(in_x, in_y, area_x, area_y);
 			flag |= locked_candidates_unit(in_x, in_y, target, area_x, area_y, area_flag, "row");
 		}
@@ -719,12 +714,6 @@ public:
 			for (int j = 0; j < 9; j += 3 )
 			{
 				target.clear_debug_flag();
-				//ostringstream sout;
-				//sout << "x : " << j << "y : " << i << endl;
-				//target.debug_flag[j][i] = 3;
-				//target.debug_flag[j+1][i] = 3;
-				//target.debug_flag[j+2][i] = 3;
-				//HTML.add_stat(target, sout.str());
 				if (locked_candidates_main(j, i, target, 1)) return;
 			}
 		}
@@ -733,12 +722,6 @@ public:
 			for (int j = 0; j < 9; j += 1 )
 			{
 				target.clear_debug_flag();
-				//ostringstream sout;
-				//sout << "x : " << j << "y : " << i << endl;
-				//target.debug_flag[j][i] = 3;
-				//target.debug_flag[j][i+1] = 3;
-				//target.debug_flag[j][i+2] = 3;
-				//HTML.add_stat(target, sout.str());
 				if (locked_candidates_main(j, i, target, 2)) return;
 			}
 		}
@@ -1019,9 +1002,6 @@ public:
 						int ty = in_y[i];
 						modified |= target.flag[ty][tx].cut_by__inv(tmp, target.debug_flag_2[ty][tx]);
 						target.debug_flag[ty][tx] = 2;
-						//ostringstream sout;
-						//sout << ty << " " << tx << endl;
-						//HTML.add_msg(sout.str());
 					}
 				}
 				if (modified)
@@ -1069,7 +1049,6 @@ public:
 				target.debug_flag[i][j] = 1;
 			}
 		}
-		//HTML.add_stat(target, "grid picker");
 	}
 	bool naked_triples_main(PG_stat &target, int mode) // mode1: normal , mode2: hidden
 	{
