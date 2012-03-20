@@ -636,8 +636,15 @@ public:
 			int a = i, b = 1 - i;
 			for (int j = 0; j < 9; j++) // check each number
 			{
+				ostringstream sout;
+				sout << j << " area_flag "; 
+				for (int k = 0; k < 6; k++) sout << area_flag[0][k] << "-";
+				for (int k = 0; k < 6; k++) sout << area_flag[1][k] << "-";
+				sout << endl;
+				HTML.add_stat(target, sout.str());
 				if (area_flag[a][j] == false) // if j dosen't appear in area 1 , so should area 2.
 				{
+
 					if (msg == "row")
 					{
 						if (target.flag[in_y][x1][j] == false && 
@@ -651,7 +658,7 @@ public:
 							target.flag[y3][in_x][j] == false) continue;
 					}
 					//cout << "area " << i << " / " << j << " is false" << endl;
-					//HTML.add_stat(target, "debug");
+					
 					//target.clear_debug_flag();
 					for (int k = 0; k < 6; k++) // for each point in area 2.
 					{
