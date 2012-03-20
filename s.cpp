@@ -1035,9 +1035,9 @@ public:
 						int ty = in_y[i];
 						modified |= target.flag[ty][tx].cut_by__inv(tmp, target.debug_flag_2[ty][tx]);
 						target.debug_flag[ty][tx] = 2;
-						ostringstream sout;
-						sout << ty << " " << tx << endl;
-						HTML.add_msg(sout.str());
+						//ostringstream sout;
+						//sout << ty << " " << tx << endl;
+						//HTML.add_msg(sout.str());
 					}
 				}
 				if (modified)
@@ -1050,6 +1050,7 @@ public:
 	}
 	void naked_triples_row_picker(PG_stat &target, int in_x[9], int in_y[9], int row)
 	{
+		//system("pause");
 		target.clear_debug_flag();
 		for (int j = 0; j < 9; j++)
 		{
@@ -1060,6 +1061,7 @@ public:
 	}
 	void naked_triples_column_picker(PG_stat &target, int in_x[9], int in_y[9], int column)
 	{
+		//system("pause");
 		target.clear_debug_flag();
 		for (int j = 0; j < 9; j++)
 		{
@@ -1071,6 +1073,7 @@ public:
 	void naked_triples_grid_picker(PG_stat &target, int in_x[9], int in_y[9], int grid) // grid: 0~8
 	
 	{
+		//system("pause");
 		target.clear_debug_flag();
 		int sx = (grid % 3) * 3;
 		int sy = (grid / 3) * 3;
@@ -1085,36 +1088,39 @@ public:
 				target.debug_flag[i][j] = 1;
 			}
 		}
+		//HTML.add_stat(target, "grid picker");
 	}
 	bool naked_triples_main(PG_stat &target, int mode) // mode1: normal , mode2: hidden
 	{
 		int ptr, in_x[9], in_y[9];
-		for (int k = 0; k < 2; k++)
+		for (int k = 0; k < 3; k++)
 		{
 
 			for (int i = 0; i < 9; i++)
 			{
-				if (k == 0)
-					naked_triples_row_picker(target, in_x, in_y, i);
-				else if (k == 1)
-					naked_triples_column_picker(target, in_x, in_y, i);
-				else if (k == 2)
-					naked_triples_grid_picker(target, in_x, in_y, i);
-				else
-					cout << "!!!ERROR!! at naked_triples_main" << endl;
+				if      (k == 0) naked_triples_row_picker(target, in_x, in_y, i);
+				else if (k == 1) naked_triples_column_picker(target, in_x, in_y, i);
+				else if (k == 2) naked_triples_grid_picker(target, in_x, in_y, i);
+				else             cout << "!!!ERROR!! at naked_triples_main" << endl;
 
 				bool tmp;
 
 				if (mode == 1)
-					naked_triples_unit(target, in_x, in_y);
+					tmp = naked_triples_unit(target, in_x, in_y);
 				else if (mode == 2)
-					hidden_naked_triples_unit(target, in_x, in_y);
+					tmp = hidden_naked_triples_unit(target, in_x, in_y);
 				else
 					cout << "!!!ERROR!!! at naked_triples_main" << endl;
 
 				if (tmp)
 				{
-					HTML.add_stat(target, "naked triples row");
+					string s_tmp = "[triples] ";
+					if (mode == 1) s_tmp += "normal ";
+					if (mode == 2) s_tmp += "hidden ";
+					if (k == 0) s_tmp += "row ";
+					if (k == 1) s_tmp += "column ";
+					if (k == 2) s_tmp += "grid ";
+					HTML.add_stat(target, s_tmp);
 					cout << "[triples]" << endl;
 					return true;
 				}
@@ -1128,7 +1134,6 @@ public:
 	}
 	bool hidden_naked_triples(PG_stat &target)
 	{
-		HTML.add_stat(target, "ori");
 		return naked_triples_main(target, 2);
 	}
 	void left_debug()
@@ -1152,7 +1157,7 @@ public:
 	void solve()
 	{
 		init_input(ori);
-		int limit = 10;
+		int limit = 3;
 		while (ori.left() > 0)
 		{
 			limit--;
