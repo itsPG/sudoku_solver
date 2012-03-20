@@ -1,3 +1,28 @@
+/*
+   +----------------------------------------------------------------------+
+   | AI Sudoku Solver                                                     |
+   +----------------------------------------------------------------------+
+   | Copyright (c) 2012 PG @ SENSE Lab (http://www.eruru.tw)              |
+   +----------------------------------------------------------------------+
+   |   　　　　^   ^                                                        
+   |   　　　_(;*ﾟーﾟ)＿_　　　　　　ミカン箱は・・・                     |
+   |   　 ／ / つつ .／＼                                                 |
+   |    ／|￣￣￣￣|＼／                                                  |
+   |    |＿＿＿＿|／                                                      |
+   |                                                                      |
+   |  　　　　　^   ^                                                  
+   |  　　　　_(;*ﾟーﾟ)＿_　　　　　・・・・・・・・                      |
+   |  　　 ／ / つつ .／＼                                                |
+   |  　／|￣￣￣￣|＼／                                                  |
+   |  　　 |みかん　..|／                                                 |
+   | 　　　￣￣￣￣
+   +----------------------------------------------------------------------+
+   | Authors: PG Tsai <PG@miko.tw>                                        |
+   |                                                                      |
+   +----------------------------------------------------------------------+
+*/
+
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -291,7 +316,7 @@ public:
 					
 				if (data[i][j])
 				{
-					fout << "			<span style=\"font-size:2em\">" << data[i][j] << "</span>" << endl;
+					fout << "			<span style=\"font-size:2em\">&nbsp;" << data[i][j] << "</span>" << endl;
 				}
 				else
 				{
@@ -304,7 +329,7 @@ public:
 							fout << "<span class=\"flag_debug_" << debug_flag_2[i][j][k] << "\">" << endl; 
 						}
 
-						if (flag[i][j][k])
+						if (flag[i][j][k] || debug_flag_2[i][j][k])
 							fout << k+1;
 						else
 							fout << "&nbsp;";
@@ -619,7 +644,6 @@ public:
 			for (int j = 0; j < 9; j++)
 				area_flag[i][j] = false;
 		target.clear_debug_flag();
-		target.debug_flag[in_y][in_x] = 3;
 		for (int i = 0; i < 9; i++) // find the union in area 1, 2 respectively
 		{
 			for (int j = 0; j < 6; j++)
@@ -630,8 +654,11 @@ public:
 				target.debug_flag[ty1][tx1] = 2;
 				area_flag[0][i] |= target.flag[ty0][tx0][i];
 				area_flag[1][i] |= target.flag[ty1][tx1][i];
+				target.debug_flag[ty0][tx0] = 1;
+				target.debug_flag[ty1][tx1] = 2;
 			}
 		}
+		
 
 		for (int i = 0; i < 2; i ++) // area 1, 2 respectively
 		{
@@ -654,9 +681,7 @@ public:
 							target.flag[y2][in_x][j] == false &&
 							target.flag[y3][in_x][j] == false) continue;
 					}
-					//cout << "area " << i << " / " << j << " is false" << endl;
-					
-					//target.clear_debug_flag();
+
 					for (int k = 0; k < 6; k++) // for each point in area 2.
 					{
 						int tx = area_x[b][k], ty = area_y[b][k];
@@ -665,8 +690,10 @@ public:
 						{
 							// we find that a(area1) is false, but b(area2) is true.
 							// fix it and print msg.
+
 							target.debug_flag[ty][tx] = 3;
-							HTML.add_stat(target, "locket candidates");
+							target.debug_flag_2[ty][tx][j] = 1;
+							
 							target.flag[ty][tx][j] = false;
 							cout << "[locked_candidates_" << msg << "] at point " << in_x << " " << in_y << endl;
 							cout << "clear (" << tx << "," << ty << ")_" << j << endl;
@@ -675,7 +702,9 @@ public:
 					}
 				}
 			}
+			if (flag) HTML.add_stat(target, "locked candidates");
 		}
+		
 		return flag;
 	}
 	bool locked_candidates_main(int in_x, int in_y, PG_stat &target, int mode) // mode1:row mode2:column
@@ -707,14 +736,14 @@ public:
 		return flag;
 	}
 
-	void locked_candidates(PG_stat &target)
+	bool locked_candidates(PG_stat &target)
 	{
 		for (int i = 0; i < 9; i += 1)
 		{
 			for (int j = 0; j < 9; j += 3 )
 			{
 				target.clear_debug_flag();
-				if (locked_candidates_main(j, i, target, 1)) return;
+				if (locked_candidates_main(j, i, target, 1)) return true;
 			}
 		}
 		for (int i = 0; i < 9; i += 3)
@@ -722,9 +751,10 @@ public:
 			for (int j = 0; j < 9; j += 1 )
 			{
 				target.clear_debug_flag();
-				if (locked_candidates_main(j, i, target, 2)) return;
+				if (locked_candidates_main(j, i, target, 2)) return true;
 			}
 		}
+		return false;
 	}
 	bool naked_pairs_unit(PG_stat &target, int in_x[9], int in_y[9])
 	{
@@ -825,7 +855,7 @@ public:
 		}
 		return false;
 	}
-	void naked_pairs(PG_stat &target)
+	bool naked_pairs(PG_stat &target)
 	{
 		int in_x[9], in_y[9];
 
@@ -841,7 +871,7 @@ public:
 			if (naked_pairs_unit(target, in_x, in_y))
 			{
 				cout << "[naked pairs ] find pair at row " << i << endl;
-				return;
+				return true;
 			}
 			/* pick column*/
 			for (int j = 0; j < 9; j++)
@@ -852,19 +882,20 @@ public:
 			if (naked_pairs_unit(target, in_x, in_y))
 			{
 				cout << "[naked pairs] find pair at column " << i << endl;
-				return;
+				return true;
 			}
 			/* pick grid*/
 			pick_grid(i, in_x, in_y);
 			if (naked_pairs_unit(target, in_x, in_y))
 			{
 				cout << "[naked pairs ] find pair at grid " << i << endl;
-				return;
+				return true;
 			}
 		}
+		return false;
 
 	}
-	void hidden_naked_pairs(PG_stat &target)
+	bool hidden_naked_pairs(PG_stat &target)
 	{
 		int in_x[9], in_y[9];
 
@@ -880,7 +911,7 @@ public:
 			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
 				cout << "[hidden naked pairs ] find pair at row " << i << endl;
-				return;
+				return true;
 			}
 			/* pick column*/
 			for (int j = 0; j < 9; j++)
@@ -891,16 +922,17 @@ public:
 			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
 				cout << "[hidden naked pairs] find pair at column " << i << endl;
-				return;
+				return true;
 			}
 			/* pick grid*/
 			pick_grid(i, in_x, in_y);
 			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
 				cout << "[hidden naked pairs ] find pair at grid " << i << endl;
-				return;
+				return true;
 			}
 		}
+		return false;
 		
 	}
 	bool naked_triples_unit(PG_stat &target, int in_x[9], int in_y[9])
@@ -982,7 +1014,7 @@ public:
 					if (t[ chosen[i] ]) place[j] = true; 
 				}
 			}
-			cout << place << endl;
+
 			if (place.size() <= 3) // if those numbers appears at less than 3 place
 			{
 
@@ -1125,13 +1157,13 @@ public:
 			cout << limit << " / left: " << ori.left() << endl; 
 			single_candidature(ori);
 
-			locked_candidates(ori);
+			if (locked_candidates(ori)) { limit++; continue;}
 
-			naked_pairs(ori);
-			hidden_naked_pairs(ori);
+			if (naked_pairs(ori)) { limit++; continue;}
+			if (hidden_naked_pairs(ori)) { limit++; continue;}
 
-			naked_triples(ori);
-			hidden_naked_triples(ori);
+			if (naked_triples(ori)) { limit++; continue;}
+			if (hidden_naked_triples(ori)) { limit++; continue;}
 
 		}
 		ori.show();
