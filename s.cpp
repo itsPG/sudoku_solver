@@ -614,9 +614,19 @@ public:
 		int y1 = in_y, y2 = in_y + 1, y3 = in_y + 2;
 		bool flag = false;
 
-		memset(area_flag, 0, sizeof(area_flag));
+		
 		target.clear_debug_flag();
 		target.debug_flag[in_y][in_x] = 3;
+		memset(area_flag, 0, sizeof(area_flag));
+		for (int i = 0; i < 2; i++)
+			for (int j = 0; j < 9; j++)
+				area_flag[i][j] = false;
+		ostringstream sout;
+		sout << "memset " << endl;
+		for (int k = 0; k < 9; k++)
+						sout << area_flag[0][k] << "-";
+		sout << endl;
+		HTML.add_msg(sout.str());
 		for (int i = 0; i < 9; i++) // find the union in area 1, 2 respectively
 		{
 			for (int j = 0; j < 6; j++)
@@ -625,9 +635,24 @@ public:
 				int tx1 = area_x[1][j], ty1 = area_y[1][j];
 				target.debug_flag[ty0][tx0] = 1;
 				target.debug_flag[ty1][tx1] = 2;
-				area_flag[0][i] |= target.flag[ty0][tx0][i];
-				area_flag[1][i] |= target.flag[ty1][tx1][i];
+				
+				ostringstream sout;
+
+				if (in_y == 3 && in_x == 0)
+				{
+					sout << i << " " << j << " !!!" << endl;
+					sout << tx0 << " " << ty0 << target.flag[ty0][tx0] << endl;
+					for (int k = 0; k < 9; k++)
+						sout << area_flag[0][k] << "-";
+					sout << endl;
+					//sout << area_flag[0][i] << endl;
+					//sout << "i " << i << " j " << j << target.flag[ty0][tx0] << endl;
+					HTML.add_msg(sout.str());
+				}
+				if (target.data[ty0][tx0] == 0 && target.flag[ty0][tx0][i] == true) area_flag[0][i] = true;
+				if (target.data[ty1][tx1] == 0 && target.flag[ty1][tx1][i] == true) area_flag[1][i] = true;
 			}
+			
 		}
 		//HTML.add_stat(target, "debug");
 		for (int i = 0; i < 2; i ++) // area 1, 2 respectively
@@ -638,10 +663,12 @@ public:
 			{
 				ostringstream sout;
 				sout << j << " area_flag "; 
-				for (int k = 0; k < 6; k++) sout << area_flag[0][k] << "-";
-				for (int k = 0; k < 6; k++) sout << area_flag[1][k] << "-";
+				for (int k = 0; k < 9; k++) sout << area_flag[0][k] << "-";
+				sout << "/////";
+				for (int k = 0; k < 9; k++) sout << area_flag[1][k] << "-";
 				sout << endl;
-				HTML.add_stat(target, sout.str());
+
+				if (in_y == 3 && in_x == 0) HTML.add_stat(target, sout.str());
 				if (area_flag[a][j] == false) // if j dosen't appear in area 1 , so should area 2.
 				{
 
