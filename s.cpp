@@ -437,14 +437,13 @@ public:
 		int y = at / 3;
 		pick_grid(x, y, in_x, in_y);
 	}
-
 	void single_candidature(PG_stat &target)
 	{
 		
-		bool key = 1;
+		bool key = true;
 		while (key)
 		{
-			key = 0;
+			key = false;
 			/* unique start */
 			for (int i = 0; i < 9 && !key; i++)
 			{
@@ -453,11 +452,9 @@ public:
 					int tmp = target.test_and_return(j, i);
 					if (tmp != -1)
 					{
-						//target.count_debug();
 						cout << "[unique] find at " << j << " " << i << " " << tmp << endl;
-						key = 1;
+						key = true;
 						target.fill_and_eliminate(j, i, tmp);
-						//system("pause");
 					}
 				}
 			}
@@ -468,8 +465,8 @@ public:
 				/* grid erase start */
 				for (int i = 0; i < 3 && !key; i++) 
 				{
-				for (int j = 0; j < 3 && !key; j++)
-				{
+					for (int j = 0; j < 3 && !key; j++)
+					{
 						int tmp = 0;
 						int tx, ty;
 						for (int ii = i * 3; ii < i * 3 + 3; ii++)
@@ -548,7 +545,7 @@ public:
 	{
 		int sx = in_x - in_x % 3;
 		int sy = in_y - in_y % 3;
-		int x1 = in_x, x2 = in_x + 1, x3 = in_x + 2;
+		int x1 = sx, x2 = sx + 1, x3 = sx + 2;
 		int ptr;
 
 		ptr = -1;
@@ -579,7 +576,7 @@ public:
 	{
 		int sx = in_x - in_x % 3;
 		int sy = in_y - in_y % 3;
-		int y1 = in_y, y2 = in_y + 1, y3 = in_y + 2;
+		int y1 = sy, y2 = sy + 1, y3 = sy + 2;
 		int ptr;
 
 		ptr = -1;
@@ -610,7 +607,7 @@ public:
 	}
 	bool locked_candidates_unit(int in_x, int in_y, PG_stat &target, int area_x[2][6], int area_y[2][6], bool area_flag[2][9], string msg)
 	{
-		if (msg != "row" && msg != "column"){cout << "msg err @ locked_candidates_unit" << endl; system("pause");}
+		if (msg != "row" && msg != "column"){cout << "msg err @ locked_candidates_unit" << endl; exit(1);}
 		int sx = in_x - in_x % 3;
 		int sy = in_y - in_y % 3;
 		int x1 = in_x, x2 = in_x + 1, x3 = in_x + 2;
@@ -619,7 +616,7 @@ public:
 
 		memset(area_flag, 0, sizeof(area_flag));
 		target.clear_debug_flag();
-
+		target.debug_flag[in_y][in_x] = 3;
 		for (int i = 0; i < 9; i++) // find the union in area 1, 2 respectively
 		{
 			for (int j = 0; j < 6; j++)
@@ -632,6 +629,7 @@ public:
 				area_flag[1][i] |= target.flag[ty1][tx1][i];
 			}
 		}
+		//HTML.add_stat(target, "debug");
 		for (int i = 0; i < 2; i ++) // area 1, 2 respectively
 		{
 			// let's assume a = area1, b = area2;
@@ -652,7 +650,9 @@ public:
 							target.flag[y2][in_x][j] == false &&
 							target.flag[y3][in_x][j] == false) continue;
 					}
-					cout << "area " << i << " / " << j << " is false" << endl;
+					//cout << "area " << i << " / " << j << " is false" << endl;
+					//HTML.add_stat(target, "debug");
+					//target.clear_debug_flag();
 					for (int k = 0; k < 6; k++) // for each point in area 2.
 					{
 						int tx = area_x[b][k], ty = area_y[b][k];
@@ -663,12 +663,11 @@ public:
 							// fix it and print msg.
 							target.debug_flag[ty][tx] = 3;
 							//target.flag_to_html("locked.html");
-							HTML.add_stat(target, "locked test");
+							HTML.add_stat(target, "locket candidates");
 							target.flag[ty][tx][j] = false;
 							cout << "[locked_candidates_" << msg << "] at point " << in_x << " " << in_y << endl;
 							cout << "clear (" << tx << "," << ty << ")_" << j << endl;
 							flag = true;
-							system("pause");
 						}
 					}
 				}
@@ -676,7 +675,7 @@ public:
 		}
 		return flag;
 	}
-	bool locked_candidates_main(int in_x, int in_y, PG_stat &target)
+	bool locked_candidates_main(int in_x, int in_y, PG_stat &target, int mode) // mode1:row mode2:column
 	{
 		int sx = in_x - in_x % 3;
 		int sy = in_y - in_y % 3;
@@ -687,20 +686,53 @@ public:
 
 		bool flag = false;
 		
-		locked_candidates_row_picker(in_x, in_y, area_x, area_y);
-		flag |= locked_candidates_unit(in_x, in_y, target, area_x, area_y, area_flag, "row");
-		if (flag) return true;
-		locked_candidates_column_picker(in_x, in_y, area_x, area_y);
-		flag |= locked_candidates_unit(in_x, in_y, target, area_x, area_y, area_flag, "column");
+		if (mode == 1)
+		{
+			//HTML.add_stat(target, "row");
+			locked_candidates_row_picker(in_x, in_y, area_x, area_y);
+			flag |= locked_candidates_unit(in_x, in_y, target, area_x, area_y, area_flag, "row");
+		}
+		else if (mode == 2)
+		{
+			locked_candidates_column_picker(in_x, in_y, area_x, area_y);
+			flag |= locked_candidates_unit(in_x, in_y, target, area_x, area_y, area_flag, "column");
+		}
+		else
+		{
+			cout << "!!!ERROR!!! at locked_candidates_main" << endl;
+			exit(1);
+		}
 		return flag;
 	}
+
 	void locked_candidates(PG_stat &target)
 	{
-		for (int i = 0; i < 9; i++)
+		for (int i = 0; i < 9; i += 1)
 		{
-			for (int j = 0; j < 9; j +=3 )
+			for (int j = 0; j < 9; j += 3 )
 			{
-				if (locked_candidates_main(j, i, target)) return;
+				target.clear_debug_flag();
+				//ostringstream sout;
+				//sout << "x : " << j << "y : " << i << endl;
+				//target.debug_flag[j][i] = 3;
+				//target.debug_flag[j+1][i] = 3;
+				//target.debug_flag[j+2][i] = 3;
+				//HTML.add_stat(target, sout.str());
+				if (locked_candidates_main(j, i, target, 1)) return;
+			}
+		}
+		for (int i = 0; i < 9; i += 3)
+		{
+			for (int j = 0; j < 9; j += 1 )
+			{
+				target.clear_debug_flag();
+				//ostringstream sout;
+				//sout << "x : " << j << "y : " << i << endl;
+				//target.debug_flag[j][i] = 3;
+				//target.debug_flag[j][i+1] = 3;
+				//target.debug_flag[j][i+2] = 3;
+				//HTML.add_stat(target, sout.str());
+				if (locked_candidates_main(j, i, target, 2)) return;
 			}
 		}
 	}
@@ -995,7 +1027,6 @@ public:
 	}
 	void naked_triples_row_picker(PG_stat &target, int in_x[9], int in_y[9], int row)
 	{
-		//system("pause");
 		target.clear_debug_flag();
 		for (int j = 0; j < 9; j++)
 		{
@@ -1006,7 +1037,6 @@ public:
 	}
 	void naked_triples_column_picker(PG_stat &target, int in_x[9], int in_y[9], int column)
 	{
-		//system("pause");
 		target.clear_debug_flag();
 		for (int j = 0; j < 9; j++)
 		{
@@ -1018,7 +1048,6 @@ public:
 	void naked_triples_grid_picker(PG_stat &target, int in_x[9], int in_y[9], int grid) // grid: 0~8
 	
 	{
-		//system("pause");
 		target.clear_debug_flag();
 		int sx = (grid % 3) * 3;
 		int sy = (grid / 3) * 3;
@@ -1102,13 +1131,14 @@ public:
 	void solve()
 	{
 		init_input(ori);
-		int limit = 50;
+		int limit = 10;
 		while (ori.left() > 0)
 		{
 			limit--;
 			if (limit <= 0) break;
 			cout << limit << " / left: " << ori.left() << endl; 
 			single_candidature(ori);
+
 			locked_candidates(ori);
 
 			naked_pairs(ori);
