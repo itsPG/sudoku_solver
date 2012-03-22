@@ -549,7 +549,7 @@ public:
 		int b = y / 3;
 		return b * 3 + a;
 	}
-	bool basic_1_left(PG_stat &target)
+	bool basic_tradidional_1_left(PG_stat &target)
 	{
 		bool flag = false;
 		int r_x, r_y;
@@ -618,6 +618,68 @@ public:
 				}
 			}
 		}
+	}
+	bool basic_grid_erase_unit(PG_stat &target, int n)
+	{
+		bool table[9][9] = {0};
+		int cnt[3][3] = {0};
+		bool flag = false;
+		target.clear_debug_flag();
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				if (target.data[i][j] == n)
+				{
+					for (int k = 0; k < 9; k++)
+					{
+						table[i][k] = true;
+						table[k][j] = true;
+						target.debug_flag[i][k] = 3;
+						target.debug_flag[k][i] = 3;
+					}
+					target.debug_flag[i][j] = 1;
+				}
+			}
+		}
+
+		
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				cnt[i/3][j/3] += table[i][j];
+			}
+		}
+		
+
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				if (table[i][j] == false && cnt[i/3][j/3] == 8 && target.data[i][j] == 0)
+				{
+					target.debug_flag[i][j] = 2;
+					target.fill_and_eliminate(j, i, n + 1);
+					flag = true;
+				}
+			}
+		}
+		return flag;
+	}
+	bool basic_grid_erase(PG_stat &target)
+	{
+		bool flag = false;
+		for (int i = 0; i < 9; i++)
+		{
+			bool tmp = basic_grid_erase_unit(target, i);
+			if (tmp)
+			{
+				flag = true;
+				HTML.add_stat(target, "basic_grid_erase");
+			}
+		}
+		return flag;
 	}
 	void single_candidature(PG_stat &target)
 	{
@@ -1319,6 +1381,7 @@ public:
 	void solve()
 	{
 		init_input(ori);
+		HTML.add_stat(ori, "ORIGIN");
 		int limit = 10;
 		while (ori.left() > 0)
 		{
@@ -1327,9 +1390,9 @@ public:
 			cout << limit << " / left: " << ori.left() << endl; 
 
 			if (basic_n_left(ori, 1)) { limit++; continue;}
-			if (basic_n_left(ori, 2)) { limit++; continue;}
-			if (basic_n_left(ori, 3)) { limit++; continue;}
-			
+			//if (basic_n_left(ori, 2)) { limit++; continue;}
+			//if (basic_n_left(ori, 3)) { limit++; continue;}
+			if (basic_grid_erase(ori)) { limit++; continue;}
 			single_candidature(ori);
 
 			if (locked_candidates(ori)) { limit++; continue;}
