@@ -272,7 +272,7 @@ public:
 		{
 			if (flag[y][x][i])
 			{
-				return i + 1;
+				return i;
 			}
 		}
 	}
@@ -330,7 +330,7 @@ public:
 					
 				if (data[i][j])
 				{
-					fout << "			<span style=\"font-size:2em\">&nbsp;" << data[i][j] << "</span>" << endl;
+					fout << "			<span style=\"font-size:2em\">&nbsp;" << data[i][j] << "&nbsp;</span>" << endl;
 				}
 				else
 				{
@@ -364,43 +364,27 @@ public:
 	}
 	void eliminate(int x, int y, int z)
 	{
-		if (z < 1 || z > 9){ cout << "error at eliminate" << endl; exit(1);}
+		if (z < 0 || z > 8){ cout << "error at eliminate" << endl; exit(1);}
 		int sx = x - x % 3;
 		int sy = y - y % 3;
 		for (int i = sy; i < sy + 3; i++)
 		{
 			for (int j = sx; j < sx + 3; j++)
 			{
-				flag[i][j][z-1] = 0;
+				flag[i][j][z] = 0;
 			}
 		}
 		for (int i = 0; i < 9; i++)
 		{
-			flag[y][i][z-1] = 0;
-			flag[i][x][z-1] = 0;
+			flag[y][i][z] = 0;
+			flag[i][x][z] = 0;
 		}
 	}
 	void fill_and_eliminate(int x, int y, int z)
 	{
-		data[y][x] = z;
-		if (z == 0) return ;
+		data[y][x] = z + 1;
 		for (int i = 0; i < 9; i++) flag[y][x][i] = 0;
 		eliminate(x, y, z);
-	}
-
-	void test()
-	{
-		init();
-		read_input();
-		show();
-		while (1)
-		{
-			int a, b, c;
-			cin >> a >> b >> c;
-			eliminate(a, b, c);
-			count_debug();
-		}
-
 	}
 };
 
@@ -500,7 +484,7 @@ public:
 		{
 			for (int j = 0; j < 9; j++)
 			{
-				target.fill_and_eliminate(j, i, target.data[i][j]);
+				if (target.data[i][j]) target.fill_and_eliminate(j, i, target.data[i][j] - 1);
 			}
 		}
 	}
@@ -582,7 +566,7 @@ public:
 						} 
 					}
 					target.debug_flag[r_y][r_x] = 1;
-					target.fill_and_eliminate(r_x, r_y, final+1);
+					target.fill_and_eliminate(r_x, r_y, final);
 					HTML.add_stat(target, "basic_1_left");
 				}
 			}
@@ -606,7 +590,7 @@ public:
 						if (target.flag[r_y][r_x].size() == 1)
 						{
 							int final = target.flag[r_y][r_x].get_num();
-							target.fill_and_eliminate(r_x, r_y, final + 1);
+							target.fill_and_eliminate(r_x, r_y, final);
 							target.debug_flag[r_y][r_x] = 2;
 							ostringstream sout;
 							sout << "basic_n_left , using " << s << endl;
@@ -629,14 +613,14 @@ public:
 		{
 			for (int j = 0; j < 9; j++)
 			{
-				if (target.data[i][j] == n)
+				if (target.data[i][j] == n + 1)
 				{
 					for (int k = 0; k < 9; k++)
 					{
 						table[i][k] = true;
 						table[k][j] = true;
 						target.debug_flag[i][k] = 3;
-						target.debug_flag[k][i] = 3;
+						target.debug_flag[k][j] = 3;
 					}
 					target.debug_flag[i][j] = 1;
 				}
@@ -657,10 +641,10 @@ public:
 		{
 			for (int j = 0; j < 9; j++)
 			{
-				if (table[i][j] == false && cnt[i/3][j/3] == 8 && target.data[i][j] == 0)
+				if (table[i][j] == false && cnt[i/3][j/3] == 8 && target.data[i][j] == 0 && target.flag[i][j][n])
 				{
 					target.debug_flag[i][j] = 2;
-					target.fill_and_eliminate(j, i, n + 1);
+					target.fill_and_eliminate(j, i, n);
 					flag = true;
 				}
 			}
@@ -733,7 +717,7 @@ public:
 						{
 							key = 1;
 							cout << "[grid erase] find at " << tx << " " << ty << " " << k << endl;
-							target.fill_and_eliminate(tx, ty, k);
+							target.fill_and_eliminate(tx, ty, k - 1);
 							target.clear_debug_flag();
 							target.debug_flag[ty][tx] = 2;
 							HTML.add_stat(target, "grid hidden single condidate");
@@ -761,7 +745,7 @@ public:
 					{
 						key = 1;
 						cout << "[row erase] find at " << tx << " " << ty << " " << k << endl;
-						target.fill_and_eliminate(tx, ty, k);
+						target.fill_and_eliminate(tx, ty, k-1);
 						target.clear_debug_flag();
 						target.debug_flag[ty][tx] = 2;
 						HTML.add_stat(target, "row hidden single condidate");
@@ -787,7 +771,7 @@ public:
 					{
 						key = 1;
 						cout << "[column erase] find at " << tx << " " << ty << " " << k << endl;
-						target.fill_and_eliminate(tx, ty, k);
+						target.fill_and_eliminate(tx, ty, k-1);
 						target.clear_debug_flag();
 						target.debug_flag[ty][tx] = 2;
 						HTML.add_stat(target, "column hidden single condidate");
