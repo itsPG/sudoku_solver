@@ -131,6 +131,20 @@ public:
 		}
 		return true;
 	}
+	int get_num()
+	{
+		if (size() != 1)
+		{
+			cout << "!!! GET_NUM ERROR !!!" << endl;
+			return -1;
+		}
+		else
+		{
+			for (int i = 0; i < 9; i++)
+				if (data[i])
+					return i;
+		}
+	}
 
 };
 ostream& operator<<(ostream &os, const PG_flag &obj)
@@ -510,7 +524,8 @@ public:
 	bool BSC_look_for_number(PG_stat &target, int mode, int at, int q, int from, int &r_x, int &r_y)
 	// mode[0~2]: row column grid, at:target area, q:query, from:for, r_x+r_y: result 
 	{
-		
+		r_x = -1; 
+		r_y = -1;
 		for (int i = from; i < 9; i++)
 		{
 			int tx = field_x[mode][at][i];
@@ -572,7 +587,37 @@ public:
 				}
 			}
 		}
-		//system("pause");
+	}
+	bool basic_n_left(PG_stat &target, int n)
+	{
+		int r_x, r_y;
+		for (int k = 0; k < 3; k++)
+		{
+			for (int i = 0; i < 9; i++)
+			{
+				int s = BSC_count_area_empty_size(target, k, i);
+				if (s <= n)
+				{
+					target.clear_debug_flag();
+					int tx, ty, final;
+					PG_flag tmp;
+					if (BSC_look_for_number(target, k, i, 0, r_x, r_y))
+					{
+						if (target.flag[r_y][r_x].size() == 1)
+						{
+							int final = target.flag[r_y][r_x].get_num();
+							target.fill_and_eliminate(r_x, r_y, final + 1);
+							target.debug_flag[r_y][r_x] = 2;
+							ostringstream sout;
+							sout << "basic_n_left , using " << s << endl;
+							HTML.add_stat(target, sout.str());
+							return true;
+						}
+					}
+					
+				}
+			}
+		}
 	}
 	void single_candidature(PG_stat &target)
 	{
@@ -1281,7 +1326,10 @@ public:
 			if (limit <= 0) break;
 			cout << limit << " / left: " << ori.left() << endl; 
 
-			if (basic_1_left(ori)) { limit++; continue;}
+			if (basic_n_left(ori, 1)) { limit++; continue;}
+			if (basic_n_left(ori, 2)) { limit++; continue;}
+			if (basic_n_left(ori, 3)) { limit++; continue;}
+			
 			single_candidature(ori);
 
 			if (locked_candidates(ori)) { limit++; continue;}
