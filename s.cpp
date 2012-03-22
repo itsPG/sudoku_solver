@@ -415,34 +415,26 @@ public:
 	}
 };
 PG_html HTML("PG.html");
+class PG_coordinate
+{
+public:
+	int x, y;
+	PG_coordinate(){ x = -1; y = -1;}
+	bool chk()
+	{
+		return x > 0 && x < 9 && y > 0 && y < 9;
+	}
+
+};
 class PG_sudoku
 {
 public:
 	PG_stat ori;
 	PG_combination C_9_2, C_9_3;
 	int result;
-	void init()
-	{
-		ori.init();
-		C_9_2.cal(9, 2);
-		C_9_3.cal(9, 3);
-	}
-	void refresh(PG_stat &target)
-	{
-		for (int i = 0; i < 9; i++)
-		{
-			for (int j = 0; j < 9; j++)
-			{
-				target.fill_and_eliminate(j, i, target.data[i][j]);
-			}
-		}
-	}
-	void init_input(PG_stat &target)
-	{
-		target.init();
-		target.read_input();
-		refresh(target);
-	}
+	int field_x[3][9][9], field_y[3][9][9];
+	static const int MODE_row = 0, MODE_column = 1, MODE_grid = 2;
+
 	void pick_grid(int x, int y, int in_x[9], int in_y[9])
 	{
 		int ptr = -1;
@@ -462,6 +454,126 @@ public:
 		int y = at / 3;
 		pick_grid(x, y, in_x, in_y);
 	}
+	void init()
+	{
+		ori.init();
+		C_9_2.cal(9, 2);
+		C_9_3.cal(9, 3);
+		int in_x[9], in_y[9];
+		PG_stat d;
+		for (int i = 0; i < 9; i++)
+		{
+			d.clear_debug_flag();
+			pick_grid(i, in_x, in_y);
+			for (int j = 0; j < 9; j++)
+			{
+				field_x[0][i][j] = j;
+				field_y[0][i][j] = i; 
+				field_x[1][i][j] = i;
+				field_y[1][i][j] = j; 
+				field_x[2][i][j] = in_x[j];
+				field_y[2][i][j] = in_y[j];
+				d.debug_flag[i][j] = 1;
+				d.debug_flag[j][i] = 2;
+				d.debug_flag[ in_y[j] ][ in_x[j] ] = 3;
+			}
+			//HTML.add_stat(d, "init");
+		}
+	}
+	void refresh(PG_stat &target)
+	{
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				target.fill_and_eliminate(j, i, target.data[i][j]);
+			}
+		}
+	}
+	void init_input(PG_stat &target)
+	{
+		target.init();
+		target.read_input();
+		refresh(target);
+	}
+	int BSC_count_area_empty_size(PG_stat &target, int mode, int at)
+	{
+		int r = 0;
+		for (int i = 0; i < 9; i++)
+		{
+			int tx = field_x[mode][at][i];
+			int ty = field_y[mode][at][i];
+			if (target.data[ty][tx] == 0) r++;
+		}
+		return r;
+	}
+	bool BSC_look_for_number(PG_stat &target, int mode, int at, int q, int from, int &r_x, int &r_y)
+	// mode[0~2]: row column grid, at:target area, q:query, from:for, r_x+r_y: result 
+	{
+		
+		for (int i = from; i < 9; i++)
+		{
+			int tx = field_x[mode][at][i];
+			int ty = field_y[mode][at][i];
+			if (target.data[ty][tx] == q)
+			{
+				r_x = tx;
+				r_y = ty;
+				return true;
+			}
+		}
+		return false;
+	}
+	bool BSC_look_for_number(PG_stat &target, int mode, int at, int q, int &r_x, int &r_y)
+	{
+		return BSC_look_for_number(target, mode, at, q, 0, r_x, r_y);
+	}
+	int BSC_get_grid(int x, int y)
+	{
+		int a = x / 3;
+		int b = y / 3;
+		return b * 3 + a;
+	}
+	bool basic_1_left(PG_stat &target)
+	{
+		bool flag = false;
+		int r_x, r_y;
+		for (int k = 0; k < 3; k++)
+		{
+			for (int i = 0; i < 9; i++)
+			{
+				int s = BSC_count_area_empty_size(target, k, i);
+				if (s == 1)
+				{
+					target.clear_debug_flag();
+					int tx, ty, final;
+					PG_flag tmp;
+					BSC_look_for_number(target, k, i, 0, r_x, r_y);
+					for (int j = 0; j < 9; j++)
+					{
+						tx = field_x[k][i][j];
+						ty = field_y[k][i][j];
+
+						int tmp2 = target.data[ty][tx] - 1;
+						if (tmp2 == -1) continue;
+						else tmp[ tmp2 ] = true;
+					}
+					for (int j = 0; j < 9; j++)
+					{
+						if (tmp[j] == false)
+						{
+							final = j;
+							break;
+						} 
+					}
+					target.debug_flag[r_y][r_x] = 1;
+					target.fill_and_eliminate(r_x, r_y, final+1);
+					HTML.add_stat(target, "basic_1_left");
+				}
+			}
+		}
+		//system("pause");
+	}
 	void single_candidature(PG_stat &target)
 	{
 		
@@ -480,6 +592,10 @@ public:
 						cout << "[unique] find at " << j << " " << i << " " << tmp << endl;
 						key = true;
 						target.fill_and_eliminate(j, i, tmp);
+						target.clear_debug_flag();
+						target.debug_flag[i][j] = 2;
+						HTML.add_stat(target, "single condidate");
+
 					}
 				}
 			}
@@ -511,6 +627,9 @@ public:
 							key = 1;
 							cout << "[grid erase] find at " << tx << " " << ty << " " << k << endl;
 							target.fill_and_eliminate(tx, ty, k);
+							target.clear_debug_flag();
+							target.debug_flag[ty][tx] = 2;
+							HTML.add_stat(target, "grid hidden single condidate");
 						}
 					
 					}
@@ -536,6 +655,9 @@ public:
 						key = 1;
 						cout << "[row erase] find at " << tx << " " << ty << " " << k << endl;
 						target.fill_and_eliminate(tx, ty, k);
+						target.clear_debug_flag();
+						target.debug_flag[ty][tx] = 2;
+						HTML.add_stat(target, "row hidden single condidate");
 					}
 				}
 				/* row erase end */
@@ -559,6 +681,9 @@ public:
 						key = 1;
 						cout << "[column erase] find at " << tx << " " << ty << " " << k << endl;
 						target.fill_and_eliminate(tx, ty, k);
+						target.clear_debug_flag();
+						target.debug_flag[ty][tx] = 2;
+						HTML.add_stat(target, "column hidden single condidate");
 					}
 				}
 				/* column erase end */
@@ -1155,6 +1280,8 @@ public:
 			limit--;
 			if (limit <= 0) break;
 			cout << limit << " / left: " << ori.left() << endl; 
+
+			if (basic_1_left(ori)) { limit++; continue;}
 			single_candidature(ori);
 
 			if (locked_candidates(ori)) { limit++; continue;}
