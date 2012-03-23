@@ -8,17 +8,17 @@
  * |         _(;*ﾟーﾟ)＿_            ミカン箱は・・・                     |
  * |      ／ / つつ .／＼                                                 |
  * |    ／|￣￣￣￣|＼／                                                  |
- * |    |＿＿＿＿|／                                                      |
+ * |      |＿＿＿＿|／                                                    |
  * |                                                                      |
  * |            ^   ^                                                     |
  * |          _(;*ﾟーﾟ)＿_          ・・・・・・・・                      |
- * |       ／ / つつ .／＼                                                |
+ * |       ／ / つつ ／＼                                                |
  * |    ／|￣￣￣￣|＼／                                                  |
- * |       |みかん  ..|／                                                 |
+ * |      | みかん |／                                                    |
  * |       ￣￣￣￣                                                       |
  * +----------------------------------------------------------------------+
  * | Authors: PG Tsai <PG@miko.tw>                                        |
- * |                                                                      |
+ * | Released under GNU General Public License v3                         |
  * +----------------------------------------------------------------------+
  */
 
@@ -29,6 +29,7 @@
 #include <cstring>
 #include <cstdlib>
 using namespace std;
+#define MACRO_DO_SOLVE { if(BSC_safe_stat(ori) == false){cout << "error" << endl; exit(1);} limit++; continue;}
 class PG_flag
 {
 public:
@@ -534,6 +535,28 @@ public:
 		int b = y / 3;
 		return b * 3 + a;
 	}
+	bool BSC_safe_stat(PG_stat &target)
+	{
+		for (int k = 0; k < 3; k++)
+		{
+			bool f[9] = {0};
+			for (int i = 0; i < 9; i++)
+			{
+				for (int j = 0; j < 9; j++)
+				{
+					int tx = field_x[k][i][j];
+					int ty = field_y[k][i][j];
+					int tmp = target.data[ty][tx];
+
+					if (f[tmp])
+						return false;
+					else
+						f[tmp] = true;
+				}
+			}
+		}
+		return true;
+	}
 	bool basic_tradidional_1_left(PG_stat &target)
 	{
 		bool flag = false;
@@ -591,7 +614,7 @@ public:
 						if (target.flag[r_y][r_x].size() == 1)
 						{
 							int final = target.flag[r_y][r_x].get_num();
-							target.fill_and_eliminate(r_x, r_y, final);
+							target.fill_and_eliminate(r_x, r_y, final/2);
 							target.debug_flag[r_y][r_x] = 2;
 							ostringstream sout;
 							sout << "basic_n_left , using " << s << endl;
@@ -1442,28 +1465,29 @@ public:
 			if (limit <= 0) break;
 			cout << limit << " / left: " << ori.left() << endl; 
 
-			//if (basic_n_left(ori, 1)) { limit++; continue;}
-			//if (basic_n_left(ori, 2)) { limit++; continue;}
-			//if (basic_n_left(ori, 3)) { limit++; continue;}
-			//if (basic_grid_erase(ori)) { limit++; continue;}
-			if (single_candidature(ori)) { limit++; continue;}
-			if (hidden_single_candidature(ori)) { limit++; continue;}
-			continue;
-			if (locked_candidates(ori)) { limit++; continue;}
+			if (basic_n_left(ori, 1)) MACRO_DO_SOLVE;
+			if (basic_n_left(ori, 2)) MACRO_DO_SOLVE;
+			//if (basic_n_left(ori, 3)) MACRO_DO_SOLVE;
+			if (basic_grid_erase(ori)) MACRO_DO_SOLVE;
+			if (single_candidature(ori)) MACRO_DO_SOLVE;
+			if (hidden_single_candidature(ori)) MACRO_DO_SOLVE;
+			if (locked_candidates(ori)) MACRO_DO_SOLVE;
 
-			if (naked_pairs(ori)) { limit++; continue;}
-			if (hidden_naked_pairs(ori)) { limit++; continue;}
+			if (naked_pairs(ori)) MACRO_DO_SOLVE;
+			if (hidden_naked_pairs(ori)) MACRO_DO_SOLVE;
 
-			if (naked_triples(ori)) { limit++; continue;}
-			if (hidden_naked_triples(ori)) { limit++; continue;}
+			if (naked_triples(ori)) MACRO_DO_SOLVE;
+			if (hidden_naked_triples(ori)) MACRO_DO_SOLVE;
 
 		}
 		ori.show();
 		//left_debug();
 		ori.count_debug();
+		ori.clear_debug_flag();
 		HTML.add_stat(ori, "FINAL");
 	}
 };
+
 int main()
 {
 	PG_stat a;
