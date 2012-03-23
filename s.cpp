@@ -382,6 +382,7 @@ public:
 	}
 	void fill_and_eliminate(int x, int y, int z)
 	{
+		if (data[y][x] != 0 && data[y][x] != z+1){cout << "!!! ERROR !!! at fill_and_eliminate"; exit(1);}
 		data[y][x] = z + 1;
 		for (int i = 0; i < 9; i++) flag[y][x][i] = 0;
 		eliminate(x, y, z);
@@ -665,7 +666,75 @@ public:
 		}
 		return flag;
 	}
-	void single_candidature(PG_stat &target)
+	bool single_candidature(PG_stat &target)
+	{
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				int tmp = target.test_and_return(j, i);
+				if (tmp != -1)
+				{
+					cout << "[unique] find at " << j << " " << i << " " << tmp << endl;
+					target.fill_and_eliminate(j, i, tmp);
+					target.clear_debug_flag();
+					target.debug_flag[i][j] = 2;
+					HTML.add_stat(target, "single condidate");
+					return true;
+				}
+			}
+		}
+		return false;
+
+	}
+	bool hidden_single_candidature(PG_stat &target)
+	{
+		for (int k = 0; k < 3; k++) // row, column, grid
+		{
+			for (int i = 0; i < 9; i++) // for each area
+			{
+				int cnt[9] = {0};
+				int last_x[9] = {0};
+				int last_y[9] = {0};
+				for (int j = 0; j < 9; j++) // for each place
+				{
+					int tx = field_x[k][i][j];
+					int ty = field_y[k][i][j];
+					if (target.data[ty][tx] != 0) continue;
+					for (int w = 0; w < 9; w++) // for each flag
+					{
+						if (target.flag[ty][tx][w])
+						{
+							cnt[w]++;
+							last_x[w] = tx;
+							last_y[w] = ty;
+						}
+					}
+				}
+				for (int j = 0; j < 9; j++) // for 1~9
+				{
+					if (cnt[j] == 1)
+					{
+						int tx = last_x[j];
+						int ty = last_y[j];
+						if (target.data[ty][tx] != 0) continue;
+						cout << "[hidden single]" << endl;
+						target.fill_and_eliminate(tx, ty, j);
+						target.clear_debug_flag();
+						target.debug_flag[ty][tx] = 2;
+						HTML.add_stat(target, "hidden single condidate");
+						return true;
+
+					}
+
+				}
+
+			}
+		}
+		return false;
+	}
+
+	void single_candidature2(PG_stat &target)
 	{
 		
 		bool key = true;
@@ -1373,12 +1442,13 @@ public:
 			if (limit <= 0) break;
 			cout << limit << " / left: " << ori.left() << endl; 
 
-			if (basic_n_left(ori, 1)) { limit++; continue;}
+			//if (basic_n_left(ori, 1)) { limit++; continue;}
 			//if (basic_n_left(ori, 2)) { limit++; continue;}
 			//if (basic_n_left(ori, 3)) { limit++; continue;}
-			if (basic_grid_erase(ori)) { limit++; continue;}
-			single_candidature(ori);
-
+			//if (basic_grid_erase(ori)) { limit++; continue;}
+			if (single_candidature(ori)) { limit++; continue;}
+			if (hidden_single_candidature(ori)) { limit++; continue;}
+			continue;
 			if (locked_candidates(ori)) { limit++; continue;}
 
 			if (naked_pairs(ori)) { limit++; continue;}
