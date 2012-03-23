@@ -400,11 +400,15 @@ public:
 		count = 0;
 		fout.open(fn.data());
 		fout << "<link href=\"sudoku.css\" type=\"text/css\" rel=\"Stylesheet\" />" << endl;
+		ifstream fin("sudoku_pre.html");
+		string t;
+		while (getline(fin, t))fout << t << endl;
+		fin.close();
 	}
 	void add_stat(PG_stat &target, string msg)
 	{
 		count++;
-		fout << "<div id=\"sudoku_" << count << "\">" << endl;
+		fout << "<div id=\"sudoku_" << count << "\" class=\"sudoku_table\">" << endl;
 		fout << "<h2>" << msg << "</h2>" << endl;
 		fout << target.to_html() << endl;
 		fout << "</div>" << endl;
@@ -434,7 +438,20 @@ public:
 	int result;
 	int field_x[3][9][9], field_y[3][9][9];
 	static const int MODE_row = 0, MODE_column = 1, MODE_grid = 2;
+	int SKILL_LV[10];
+	/*
+		1: basic 1_left
+		2: basic 2_left
+		3: basic grid erase
+		4: single candidate
+		5: naked pairs
+		6: naked triples
+		7: locked candidate
+		8: hidden single candidate
+		9: hidden naked pairs 
+		10: hidden naked triples
 
+	*/
 	void pick_grid(int x, int y, int in_x[9], int in_y[9])
 	{
 		int ptr = -1;
@@ -460,7 +477,7 @@ public:
 		C_9_2.cal(9, 2);
 		C_9_3.cal(9, 3);
 		int in_x[9], in_y[9];
-		PG_stat d;
+		PG_stat d; 
 		for (int i = 0; i < 9; i++)
 		{
 			d.clear_debug_flag();
@@ -539,17 +556,27 @@ public:
 	{
 		for (int k = 0; k < 3; k++)
 		{
-			bool f[9] = {0};
+			
 			for (int i = 0; i < 9; i++)
 			{
+				bool f[9] = {0};
 				for (int j = 0; j < 9; j++)
 				{
 					int tx = field_x[k][i][j];
 					int ty = field_y[k][i][j];
-					int tmp = target.data[ty][tx];
+					int tmp = target.data[ty][tx] - 1;
+					//cout << "set " << tx << " " << ty << " " << tmp << endl;
+					if (tmp == -1) continue;
 
+					
 					if (f[tmp])
+					{
+						target.clear_debug_flag();
+						target.debug_flag[tx][ty] = 1;
+						HTML.add_stat(target, "failed");
+						cout << "failed at" << j << endl;
 						return false;
+					}
 					else
 						f[tmp] = true;
 				}
@@ -614,7 +641,7 @@ public:
 						if (target.flag[r_y][r_x].size() == 1)
 						{
 							int final = target.flag[r_y][r_x].get_num();
-							target.fill_and_eliminate(r_x, r_y, final/2);
+							target.fill_and_eliminate(r_x, r_y, final);
 							target.debug_flag[r_y][r_x] = 2;
 							ostringstream sout;
 							sout << "basic_n_left , using " << s << endl;
