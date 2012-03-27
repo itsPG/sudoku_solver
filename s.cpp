@@ -430,6 +430,145 @@ public:
 	}
 
 };
+class PG_sudoku_DFS
+{
+public:
+	PG_stat ori;
+	int list_x[100], list_y[100], list_num[100];
+	int list_size;
+	bool stop;
+	int solution_count;
+	void read_input()
+	{
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				cin >> ori.data[i][j];
+			}
+		}
+	}
+	void push_list(int in_x, int in_y)
+	{
+		list_size++;
+		list_x[list_size] = in_x;
+		list_y[list_size] = in_y;
+	}
+	void get_list(int n, int &in_x, int &in_y)
+	{
+		in_x = list_x[n];
+		in_y = list_y[n];
+	}
+	void show_list()
+	{
+		for (int i = 1; i <= list_size; i++)
+			cout << "list " << i << " : " << list_x[i] << " " << list_y[i] << endl;
+	}
+	bool show(PG_stat &target)
+	{
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+				cout << target.data[i][j] << " ";
+			cout << endl;
+		}
+	}
+	void init()
+	{
+		list_size = 0;
+		solution_count = 0;
+		stop = false;
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				if (ori.data[i][j] == 0)
+				{
+					push_list(j, i);
+				}
+			}
+		}
+	}
+	void set(PG_stat &target)
+	{
+		ori = target;
+
+	}
+
+	
+	bool chk(PG_stat &target)
+	{
+		bool flag[9];
+		
+		for (int i = 0; i < 9; i++)
+		{
+			target.clear_debug_flag();
+			memset(flag, 0, sizeof(flag));
+			for (int j = 0; j < 9; j++)
+			{
+				target.debug_flag[i][j] = 1;
+				int t = target.data[i][j] - 1;
+				if (t == -1) continue;
+				if (flag[t])return false;
+				else flag[t] = true;
+			}
+
+			memset(flag, 0, sizeof(flag));
+			for (int j = 0; j < 9; j++)
+			{
+				target.debug_flag[j][i] = 2;
+				int t = target.data[j][i] - 1;
+				if (t == -1) continue;
+				if (t != -1 && flag[t]) return false;
+				else flag[t] = true;
+			}
+
+			memset(flag, 0, sizeof(flag));
+			int sx = (i % 3) * 3, sy = (i / 3) * 3;
+			for (int y = sy; y < sy + 3; y++)
+			{
+
+				for (int x = sx; x < sx + 3; x++)
+				{
+					target.debug_flag[y][x] = 3;
+					int t = target.data[y][x] - 1;
+					if (t == -1) continue;
+					if (t != -1 && flag[t]) return false;
+					else flag[t] = true;
+				}
+			}
+			//HTML.add_stat(target, "checkerdebug");
+		}
+		return true;
+	}
+	bool dfs(PG_stat q, int depth, int num)
+	{
+		//if (stop) return true;
+		int in_x, in_y;
+		get_list(depth, in_x, in_y);
+		//cout << depth << " " << in_x << " " << in_y << endl;
+		q.data[in_y][in_x] = num + 1;
+		if (chk(q) == false) return false;
+		if (depth == list_size)
+		{
+			cout << "find a solution" << endl;
+			show(q);
+			stop = true;
+			solution_count++;
+			return true;
+		}
+		for (int i = 0; i < 9; i++) dfs(q, depth + 1, i);
+		return false;
+	}
+	void solve()
+	{
+		read_input();
+		init();
+		for(int i = 0; i < 9; i++) dfs(ori, 1, i);
+
+	}
+
+};
 class PG_sudoku
 {
 public:
@@ -1481,6 +1620,7 @@ public:
 			}
 		}
 	}
+
 	void solve()
 	{
 		init_input(ori);
@@ -1513,6 +1653,7 @@ public:
 		ori.clear_debug_flag();
 		HTML.add_stat(ori, "FINAL");
 	}
+
 };
 
 int main()
@@ -1520,7 +1661,15 @@ int main()
 	PG_stat a;
 	//a.test();
 	PG_sudoku b;
+	PG_sudoku_DFS c;
+
+	c.solve();
+	return 0;
+	
 	b.init();
 	b.solve();
+
+	
+	
 
 }
