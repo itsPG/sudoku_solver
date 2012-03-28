@@ -30,6 +30,7 @@
 #include <cstdlib>
 using namespace std;
 #define MACRO_DO_SOLVE { if(BSC_safe_stat(ori) == false){cout << "error" << endl; exit(1);} limit++; continue;}
+#define MACRO_DO_SOLVE_CHK_AND_CONTI if(BSC_safe_stat(ori) == false){cout << "error" << endl; exit(1);} limit++; continue;
 class PG_flag
 {
 public:
@@ -433,7 +434,7 @@ public:
 class PG_sudoku_DFS
 {
 public:
-	PG_stat ori;
+	PG_stat ori, solution;
 	int list_x[100], list_y[100], list_num[100];
 	int list_size;
 	bool stop;
@@ -489,13 +490,11 @@ public:
 			}
 		}
 	}
-	void set(PG_stat &target)
+	void init(PG_stat &target)
 	{
 		ori = target;
-
+		init();
 	}
-
-	
 	bool chk(PG_stat &target)
 	{
 		bool flag[9];
@@ -541,31 +540,37 @@ public:
 		}
 		return true;
 	}
-	bool dfs(PG_stat q, int depth, int num)
+	void dfs(PG_stat q, int depth, int num)
 	{
 		//if (stop) return true;
+		if (solution_count > 10000)
+		{
+			cout << "solution count over than 10000" << endl;
+			return ;
+		}
 		int in_x, in_y;
 		get_list(depth, in_x, in_y);
 		//cout << depth << " " << in_x << " " << in_y << endl;
 		q.data[in_y][in_x] = num + 1;
-		if (chk(q) == false) return false;
+		if (chk(q) == false) return ;
 		if (depth == list_size)
 		{
 			cout << "find a solution" << endl;
+			q.clear_debug_flag();
+			HTML.add_stat(q, "find a solution by try and error");
 			show(q);
 			stop = true;
 			solution_count++;
-			return true;
+			solution = q;
+			return ;
 		}
 		for (int i = 0; i < 9; i++) dfs(q, depth + 1, i);
-		return false;
+		return ;
 	}
-	void solve()
+	int solve()
 	{
-		read_input();
-		init();
 		for(int i = 0; i < 9; i++) dfs(ori, 1, i);
-
+		return solution_count;
 	}
 
 };
@@ -577,20 +582,32 @@ public:
 	int result;
 	int field_x[3][9][9], field_y[3][9][9];
 	static const int MODE_row = 0, MODE_column = 1, MODE_grid = 2;
-	int SKILL_LV[10];
+	int SKILL_LV[20];
+	int SKILL_FACTOR[20];
 	/*
 		1: basic 1_left
-		2: basic 2_left
-		3: basic grid erase
+		2: basic 2_left 
+		3: basic 3_left, basic grid erase
 		4: single candidate
 		5: naked pairs
-		6: naked triples
+		6: hidden single candidate
 		7: locked candidate
-		8: hidden single candidate
+		8: naked triples
 		9: hidden naked pairs 
 		10: hidden naked triples
-
 	*/
+	static const int C_1_LEFT = 1;
+	static const int C_2_LEFT = 2;
+	static const int C_3_LEFT = 3;
+	static const int C_GRID_ERASE = 3;
+	static const int C_SINGLE_CANDIDATE = 4;
+	static const int C_NAKED_PAIRS = 5;
+	static const int C_HIDDEN_SINGLE = 6;
+	static const int C_LOCKED_CANDIDATE = 7;
+	static const int C_NAKED_TRIPLES = 8;
+	static const int C_HIDDEN_NAKED_PAIRS = 9;
+	static const int C_HIDDEN_NAKED_TRIPLES = 10;
+	static const int C_ULTIMATE = 11;
 	void pick_grid(int x, int y, int in_x[9], int in_y[9])
 	{
 		int ptr = -1;
@@ -617,6 +634,19 @@ public:
 		C_9_3.cal(9, 3);
 		int in_x[9], in_y[9];
 		PG_stat d; 
+		memset(SKILL_LV, 0, sizeof(SKILL_LV));
+		SKILL_FACTOR[ C_1_LEFT                ] =    10;
+		SKILL_FACTOR[ C_2_LEFT                ] =    30;
+		SKILL_FACTOR[ C_3_LEFT                ] =    60;
+		SKILL_FACTOR[ C_GRID_ERASE            ] =    50;
+		SKILL_FACTOR[ C_SINGLE_CANDIDATE      ] =   300;
+		SKILL_FACTOR[ C_NAKED_PAIRS           ] =   500;
+		SKILL_FACTOR[ C_HIDDEN_SINGLE         ] =   800;
+		SKILL_FACTOR[ C_LOCKED_CANDIDATE      ] =  1000;
+		SKILL_FACTOR[ C_NAKED_TRIPLES         ] =  1000;
+		SKILL_FACTOR[ C_HIDDEN_NAKED_PAIRS    ] =  3000;
+		SKILL_FACTOR[ C_HIDDEN_NAKED_TRIPLES  ] =  9000;
+		SKILL_FACTOR[ C_ULTIMATE              ] = 30000;
 		for (int i = 0; i < 9; i++)
 		{
 			d.clear_debug_flag();
@@ -1620,40 +1650,119 @@ public:
 			}
 		}
 	}
-
+	int ultimate_skill(PG_stat &target)
+	{
+		PG_sudoku_DFS tmp;
+		tmp.init(target);
+		int r = tmp.solve();
+		target = tmp.solution;
+		return r;
+	}
 	void solve()
 	{
 		init_input(ori);
 		HTML.add_stat(ori, "ORIGIN");
-		int limit = 10;
+		int limit = 3;
+		int additional_count = 0;
 		while (ori.left() > 0)
 		{
 			limit--;
 			if (limit <= 0) break;
 			cout << limit << " / left: " << ori.left() << endl; 
+			/*
+				1: basic 1_left
+				2: basic 2_left 
+				3: basic 3_left, basic grid erase
+				4: single candidate
+				5: naked pairs
+				6: hidden single candidate
+				7: locked candidate
+				8: naked triples
+				9: hidden naked pairs 
+				10: hidden naked triples
+			*/
+			if (basic_n_left(ori, 1)) {
+				SKILL_LV[1]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
 
-			if (basic_n_left(ori, 1)) MACRO_DO_SOLVE;
-			if (basic_n_left(ori, 2)) MACRO_DO_SOLVE;
-			//if (basic_n_left(ori, 3)) MACRO_DO_SOLVE;
-			if (basic_grid_erase(ori)) MACRO_DO_SOLVE;
-			if (single_candidature(ori)) MACRO_DO_SOLVE;
-			if (hidden_single_candidature(ori)) MACRO_DO_SOLVE;
-			if (locked_candidates(ori)) MACRO_DO_SOLVE;
+			if (basic_n_left(ori, 2)) {
+				SKILL_LV[2]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
 
-			if (naked_pairs(ori)) MACRO_DO_SOLVE;
-			if (hidden_naked_pairs(ori)) MACRO_DO_SOLVE;
+			if (basic_n_left(ori, 3)) {
+				SKILL_LV[3]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
 
-			if (naked_triples(ori)) MACRO_DO_SOLVE;
-			if (hidden_naked_triples(ori)) MACRO_DO_SOLVE;
+			if (basic_grid_erase(ori)) {
+				SKILL_LV[3]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
+
+			if (single_candidature(ori)) {
+				if (additional_count == 0)
+				{
+					additional_count = ori.left() * 500;
+				}
+				SKILL_LV[4]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
+
+			if (naked_pairs(ori)) {
+				SKILL_LV[5]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
+
+			if (hidden_single_candidature(ori)) {
+				SKILL_LV[6]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
+
+			if (locked_candidates(ori)) {
+				SKILL_LV[7]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
+
+			if (naked_triples(ori)) {
+				SKILL_LV[8]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
+
+			if (hidden_naked_pairs(ori)) {
+				SKILL_LV[9]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
+			
+			if (hidden_naked_triples(ori)) {
+				SKILL_LV[10]++;
+				MACRO_DO_SOLVE_CHK_AND_CONTI;
+			}
+		}
+		if (ori.left() > 0)
+		{
+			SKILL_LV[11] = ori.left();
+			ultimate_skill(ori);
 
 		}
+		ostringstream sout;
+		int final_count = 0;
+		for (int i = 1; i <= 11; i++)
+		{
+			sout << "skill " << i << " is used by " << SKILL_LV[i] << " time(s).<br />" << endl; 
+			final_count += SKILL_LV[i] * SKILL_FACTOR[i];
+		}
+		sout << "additional count: " << additional_count << endl;
+		sout << "<h1>FINAL SCORE: " << final_count + additional_count << "</h1>" << endl;
+		cout << sout.str() << endl;
 		ori.show();
 		//left_debug();
 		ori.count_debug();
 		ori.clear_debug_flag();
 		HTML.add_stat(ori, "FINAL");
+		HTML.add_msg(sout.str());
 	}
-
 };
 
 int main()
@@ -1662,14 +1771,8 @@ int main()
 	//a.test();
 	PG_sudoku b;
 	PG_sudoku_DFS c;
-
-	c.solve();
-	return 0;
-	
+	//c.solve();
+	//return 0;
 	b.init();
 	b.solve();
-
-	
-	
-
 }
