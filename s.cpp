@@ -29,6 +29,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
+#include <algorithm>
 using namespace std;
 #define MACRO_DO_SOLVE { if(BSC_safe_stat(ori) == false){cout << "error" << endl; exit(1);} limit++; continue;}
 #define MACRO_DO_SOLVE_CHK_AND_CONTI if(BSC_safe_stat(ori) == false){cout << "error" << endl; exit(1);} limit++; continue;
@@ -600,6 +601,7 @@ public:
 	static const int MODE_row = 0, MODE_column = 1, MODE_grid = 2;
 	int SKILL_LV[20];
 	int SKILL_FACTOR[20];
+	string final_msg;
 	/*
 		1: basic 1_left
 		2: basic 2_left 
@@ -1825,6 +1827,7 @@ public:
 		ori.clear_debug_flag();
 		HTML.add_stat(ori, "FINAL");
 		HTML.add_msg(sout.str());
+		final_msg = sout.str();
 		return final_count;
 	}
 	int init_and_feed_and_solve(int in[9][9])
@@ -1834,6 +1837,15 @@ public:
 		return solve();
 	}
 };
+struct ans_pair
+{
+	int n, score;
+};
+bool ans_pair_cmp(ans_pair a, ans_pair b)
+{
+	if (a.score == b.score) return a.n < b.n;
+	else return a.score > b.score;
+}
 class AI_hw1
 {
 public:
@@ -1851,33 +1863,83 @@ public:
 		{
 			for (int j = 0; j < 9; j++)
 			{
-				fin >> data[i][j];
+				//fin >> data[i][j];
+				char t;
+				while (1)
+				{
+					fin.get(t);
+					if (t < '0' || t > '9') continue;
+					else {data[i][j] = t - '0'; break;}
+				}
 			}
 		}
 		
 	}
-	int ans[11];
+	ans_pair ans[11];
+	
 	void main()
 	{
+		ostringstream result_msg;
+		PG_html ANS("sudoku_ans.html");
 		for (int i = 1; i <= q_size; i++)
 		{
 			cout << "solving problem #" << i << endl;
 			ostringstream fn_sout ;
+			string fn;
 			fn_sout << "sudoku";
 			if (i < 10) fn_sout << "0";
 			fn_sout << i << ".txt";
-			read_file(fn_sout.str().data());
+			fn = fn_sout.str();
+			read_file(fn.data());
 			fn_sout << ".html";
 			HTML.close();
 			HTML.open(fn_sout.str());
-			ans[i] = rixia.init_and_feed_and_solve(data);
+			ans[i].score = rixia.init_and_feed_and_solve(data);
+			ans[i].n = i;
+			ANS.add_stat(rixia.ori, fn);
+			ANS.add_msg(rixia.final_msg);
+			result_msg << "ans for " << fn << endl;
+			for (int i = 0; i < 9; i++)
+			{
+				for (int j = 0; j < 9; j++)
+				{
+					result_msg << rixia.ori.data[i][j];
+				}
+				result_msg << endl;
+			}
+			result_msg << endl;
 		}
-		cout << "/****************************************************/" << endl;
+		ostringstream sout;
+		sout << "/****************************************************/" << endl;
 		for (int i = 1; i <= q_size; i++)
 		{
-			cout << "# " << i << " : " << ans[i] << endl;
+			sout << "# " << ans[i].n << " : " << ans[i].score << endl;
 		}
-		cout << "/****************************************************/" << endl;
+		sort(ans + 1, ans + q_size + 1, ans_pair_cmp);
+		for (int i = 1; i <= q_size; i++)
+		{
+			sout << "# " << ans[i].n << " : " << ans[i].score << endl;
+		}
+		for (int i = 1; i <=q_size; i++)
+		{
+			if (i != 1)
+			{
+				sout << " > ";
+				result_msg << " > ";
+			} 
+			sout << ans[i].n;
+			result_msg << ans[i].n;
+			
+		}
+		sout << endl;
+
+		sout << "/****************************************************/" << endl;
+
+		cout << sout.str() << endl;
+		ofstream fout("result.txt");
+		fout << result_msg.str() << endl;
+
+		fout.close();
 	}
 
 
