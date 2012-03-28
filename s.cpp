@@ -28,9 +28,11 @@
 #include <sstream>
 #include <cstring>
 #include <cstdlib>
+#include <cmath>
 using namespace std;
 #define MACRO_DO_SOLVE { if(BSC_safe_stat(ori) == false){cout << "error" << endl; exit(1);} limit++; continue;}
 #define MACRO_DO_SOLVE_CHK_AND_CONTI if(BSC_safe_stat(ori) == false){cout << "error" << endl; exit(1);} limit++; continue;
+#define show_debug_msg 0
 class PG_flag
 {
 public:
@@ -396,9 +398,11 @@ class PG_html
 public:
 	ofstream fout;
 	int count;
-	PG_html(string fn)
+	bool close_flag;
+	void open(string fn)
 	{
 		count = 0;
+		close_flag = false;
 		fout.open(fn.data());
 		fout << "<link href=\"sudoku.css\" type=\"text/css\" rel=\"Stylesheet\" />" << endl;
 		ifstream fin("sudoku_pre.html");
@@ -406,8 +410,19 @@ public:
 		while (getline(fin, t))fout << t << endl;
 		fin.close();
 	}
+	void close()
+	{
+		fout.close();
+		close_flag = true;
+	}
+	PG_html(string fn)
+	{
+		open(fn);
+	}
+
 	void add_stat(PG_stat &target, string msg)
 	{
+		if (close_flag) return;
 		count++;
 		fout << "<div id=\"sudoku_" << count << "\" class=\"sudoku_table\">" << endl;
 		fout << "<h2>" << msg << "</h2>" << endl;
@@ -416,6 +431,7 @@ public:
 	}
 	void add_msg(string msg)
 	{
+		if (close_flag) return;
 		fout << "<h3>" << msg << "</h3>" << endl;
 	}
 };
@@ -638,15 +654,15 @@ public:
 		memset(SKILL_LV, 0, sizeof(SKILL_LV));
 		SKILL_FACTOR[ C_1_LEFT                ] =    10;
 		SKILL_FACTOR[ C_2_LEFT                ] =    30;
-		SKILL_FACTOR[ C_3_LEFT                ] =    60;
+		SKILL_FACTOR[ C_3_LEFT                ] =   100;
 		SKILL_FACTOR[ C_GRID_ERASE            ] =    50;
-		SKILL_FACTOR[ C_SINGLE_CANDIDATE      ] =   300;
-		SKILL_FACTOR[ C_NAKED_PAIRS           ] =   500;
-		SKILL_FACTOR[ C_HIDDEN_SINGLE         ] =   800;
-		SKILL_FACTOR[ C_LOCKED_CANDIDATE      ] =  1000;
-		SKILL_FACTOR[ C_NAKED_TRIPLES         ] =  1000;
-		SKILL_FACTOR[ C_HIDDEN_NAKED_PAIRS    ] =  3000;
-		SKILL_FACTOR[ C_HIDDEN_NAKED_TRIPLES  ] =  9000;
+		SKILL_FACTOR[ C_SINGLE_CANDIDATE      ] =   200;
+		SKILL_FACTOR[ C_NAKED_PAIRS           ] =  1000;
+		SKILL_FACTOR[ C_HIDDEN_SINGLE         ] =  2000;
+		SKILL_FACTOR[ C_LOCKED_CANDIDATE      ] =  3000;
+		SKILL_FACTOR[ C_NAKED_TRIPLES         ] =  3000;
+		SKILL_FACTOR[ C_HIDDEN_NAKED_PAIRS    ] =  9000;
+		SKILL_FACTOR[ C_HIDDEN_NAKED_TRIPLES  ] = 12000;
 		SKILL_FACTOR[ C_ULTIMATE              ] = 30000;
 		for (int i = 0; i < 9; i++)
 		{
@@ -681,6 +697,18 @@ public:
 	{
 		target.init();
 		target.read_input();
+		refresh(target);
+	}
+	void init_input(PG_stat &target, int in[9][9])
+	{
+		target.init();
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				target.data[i][j] = in[i][j];
+			}
+		}
 		refresh(target);
 	}
 	int BSC_count_area_empty_size(PG_stat &target, int mode, int at)
@@ -735,7 +763,6 @@ public:
 					int tx = field_x[k][i][j];
 					int ty = field_y[k][i][j];
 					int tmp = target.data[ty][tx] - 1;
-					//cout << "set " << tx << " " << ty << " " << tmp << endl;
 					if (tmp == -1) continue;
 
 					
@@ -744,7 +771,7 @@ public:
 						target.clear_debug_flag();
 						target.debug_flag[tx][ty] = 1;
 						HTML.add_stat(target, "failed");
-						cout << "failed at" << j << endl;
+						if (show_debug_msg) cout << "failed at" << j << endl;
 						return false;
 					}
 					else
@@ -900,7 +927,7 @@ public:
 				int tmp = target.test_and_return(j, i);
 				if (tmp != -1)
 				{
-					cout << "[unique] find at " << j << " " << i << " " << tmp << endl;
+					if (show_debug_msg) cout << "[unique] find at " << j << " " << i << " " << tmp << endl;
 					target.fill_and_eliminate(j, i, tmp);
 					target.clear_debug_flag();
 					target.debug_flag[i][j] = 2;
@@ -943,7 +970,7 @@ public:
 						int tx = last_x[j];
 						int ty = last_y[j];
 						if (target.data[ty][tx] != 0) continue;
-						cout << "[hidden single]" << endl;
+						if (show_debug_msg) cout << "[hidden single]" << endl;
 						target.fill_and_eliminate(tx, ty, j);
 						target.clear_debug_flag();
 						target.debug_flag[ty][tx] = 2;
@@ -974,7 +1001,7 @@ public:
 					int tmp = target.test_and_return(j, i);
 					if (tmp != -1)
 					{
-						cout << "[unique] find at " << j << " " << i << " " << tmp << endl;
+						if (show_debug_msg) cout << "[unique] find at " << j << " " << i << " " << tmp << endl;
 						key = true;
 						target.fill_and_eliminate(j, i, tmp);
 						target.clear_debug_flag();
@@ -1010,7 +1037,7 @@ public:
 						if (tmp == 1)
 						{
 							key = 1;
-							cout << "[grid erase] find at " << tx << " " << ty << " " << k << endl;
+							if (show_debug_msg) cout << "[grid erase] find at " << tx << " " << ty << " " << k << endl;
 							target.fill_and_eliminate(tx, ty, k - 1);
 							target.clear_debug_flag();
 							target.debug_flag[ty][tx] = 2;
@@ -1038,7 +1065,7 @@ public:
 					if (tmp == 1)
 					{
 						key = 1;
-						cout << "[row erase] find at " << tx << " " << ty << " " << k << endl;
+						if (show_debug_msg) cout << "[row erase] find at " << tx << " " << ty << " " << k << endl;
 						target.fill_and_eliminate(tx, ty, k-1);
 						target.clear_debug_flag();
 						target.debug_flag[ty][tx] = 2;
@@ -1064,7 +1091,7 @@ public:
 					if (tmp == 1)
 					{
 						key = 1;
-						cout << "[column erase] find at " << tx << " " << ty << " " << k << endl;
+						if (show_debug_msg) cout << "[column erase] find at " << tx << " " << ty << " " << k << endl;
 						target.fill_and_eliminate(tx, ty, k-1);
 						target.clear_debug_flag();
 						target.debug_flag[ty][tx] = 2;
@@ -1205,8 +1232,8 @@ public:
 							target.debug_flag_2[ty][tx][j] = 1;
 							
 							target.flag[ty][tx][j] = false;
-							cout << "[locked_candidates_" << msg << "] at point " << in_x << " " << in_y << endl;
-							cout << "clear (" << tx << "," << ty << ")_" << j << endl;
+							if (show_debug_msg) cout << "[locked_candidates_" << msg << "] at point " << in_x << " " << in_y << endl;
+							if (show_debug_msg) cout << "clear (" << tx << "," << ty << ")_" << j << endl;
 							flag = true;
 						}
 					}
@@ -1380,7 +1407,7 @@ public:
 			}
 			if (naked_pairs_unit(target, in_x, in_y))
 			{
-				cout << "[naked pairs ] find pair at row " << i << endl;
+				if (show_debug_msg) cout << "[naked pairs ] find pair at row " << i << endl;
 				return true;
 			}
 			/* pick column*/
@@ -1391,14 +1418,14 @@ public:
 			}
 			if (naked_pairs_unit(target, in_x, in_y))
 			{
-				cout << "[naked pairs] find pair at column " << i << endl;
+				if (show_debug_msg) cout << "[naked pairs] find pair at column " << i << endl;
 				return true;
 			}
 			/* pick grid*/
 			pick_grid(i, in_x, in_y);
 			if (naked_pairs_unit(target, in_x, in_y))
 			{
-				cout << "[naked pairs ] find pair at grid " << i << endl;
+				if (show_debug_msg) cout << "[naked pairs ] find pair at grid " << i << endl;
 				return true;
 			}
 		}
@@ -1420,7 +1447,7 @@ public:
 			}
 			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
-				cout << "[hidden naked pairs ] find pair at row " << i << endl;
+				if (show_debug_msg) cout << "[hidden naked pairs ] find pair at row " << i << endl;
 				return true;
 			}
 			/* pick column*/
@@ -1431,14 +1458,14 @@ public:
 			}
 			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
-				cout << "[hidden naked pairs] find pair at column " << i << endl;
+				if (show_debug_msg) cout << "[hidden naked pairs] find pair at column " << i << endl;
 				return true;
 			}
 			/* pick grid*/
 			pick_grid(i, in_x, in_y);
 			if (hidden_naked_pairs_unit(target, in_x, in_y))
 			{
-				cout << "[hidden naked pairs ] find pair at grid " << i << endl;
+				if (show_debug_msg) cout << "[hidden naked pairs ] find pair at grid " << i << endl;
 				return true;
 			}
 		}
@@ -1623,7 +1650,7 @@ public:
 					if (k == 1) s_tmp += "column ";
 					if (k == 2) s_tmp += "grid ";
 					HTML.add_stat(target, s_tmp);
-					cout << "[triples]" << endl;
+					if (show_debug_msg) cout << "[triples]" << endl;
 					return true;
 				}
 			}
@@ -1664,9 +1691,34 @@ public:
 		target = tmp.solution;
 		return r;
 	}
-	void solve()
+	int count_additional_cost()
 	{
-		init_input(ori);
+		int count = 0;
+		int r = 0;
+		//additional_count = ori.left() * 500;
+		ori.clear_debug_flag();
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				for (int k = 0; k < 9; k++)
+				{
+					if (ori.flag[i][j][k] && ori_clear_list.flag[i][j][k])
+					{
+						ori.debug_flag_2[i][j][k] = true;
+						count++;
+					}
+				}
+			}
+		}
+		r = count * 30;
+		//r = (int)pow((double)count, 1.5);
+		HTML.add_stat(ori, "additional_count");
+		return r;
+	}
+	int solve()
+	{
+		
 		HTML.add_stat(ori, "ORIGIN");
 		int limit = 3;
 		int additional_count = 0;
@@ -1674,7 +1726,7 @@ public:
 		{
 			limit--;
 			if (limit <= 0) break;
-			cout << limit << " / left: " << ori.left() << endl; 
+			if (show_debug_msg) cout << limit << " / left: " << ori.left() << endl; 
 			/*
 				1: basic 1_left
 				2: basic 2_left 
@@ -1710,25 +1762,7 @@ public:
 			if (single_candidature(ori)) {
 				if (additional_count == 0)
 				{
-					int count = 0;
-					//additional_count = ori.left() * 500;
-					ori.clear_debug_flag();
-					for (int i = 0; i < 9; i++)
-					{
-						for (int j = 0; j < 9; j++)
-						{
-							for (int k = 0; k < 9; k++)
-							{
-								if (ori.flag[i][j][k] && ori_clear_list.flag[i][j][k])
-									{
-										ori.debug_flag_2[i][j][k] = true;
-										count++;
-									}
-							}
-						}
-					}
-					additional_count = count * 30;
-					HTML.add_stat(ori, "additional_count");
+					additional_count = count_additional_cost();
 				}
 				SKILL_LV[4]++;
 				MACRO_DO_SOLVE_CHK_AND_CONTI;
@@ -1740,6 +1774,10 @@ public:
 			}
 
 			if (hidden_single_candidature(ori)) {
+				if (additional_count == 0)
+				{
+					additional_count = count_additional_cost()*1.2;
+				}
 				SKILL_LV[6]++;
 				MACRO_DO_SOLVE_CHK_AND_CONTI;
 			}
@@ -1777,20 +1815,79 @@ public:
 			sout << "skill " << i << " is used by " << SKILL_LV[i] << " time(s).<br />" << endl; 
 			final_count += SKILL_LV[i] * SKILL_FACTOR[i];
 		}
+		final_count += additional_count;
 		sout << "additional count: " << additional_count << endl;
-		sout << "<h1>FINAL SCORE: " << final_count + additional_count << "</h1>" << endl;
+		sout << "<h1>FINAL SCORE: " << final_count << "</h1>" << endl;
 		cout << sout.str() << endl;
 		ori.show();
 		//left_debug();
-		ori.count_debug();
+		//ori.count_debug();
 		ori.clear_debug_flag();
 		HTML.add_stat(ori, "FINAL");
 		HTML.add_msg(sout.str());
+		return final_count;
+	}
+	int init_and_feed_and_solve(int in[9][9])
+	{
+		init();
+		init_input(ori, in);
+		return solve();
 	}
 };
+class AI_hw1
+{
+public:
+	int data[9][9];
+	PG_sudoku rixia;
+	int q_size;
+	AI_hw1()
+	{
+		q_size = 10;
+	}
+	void read_file(string fn)
+	{
+		ifstream fin(fn.data());
+		for (int i = 0; i < 9; i++)
+		{
+			for (int j = 0; j < 9; j++)
+			{
+				fin >> data[i][j];
+			}
+		}
+		
+	}
+	int ans[11];
+	void main()
+	{
+		for (int i = 1; i <= q_size; i++)
+		{
+			cout << "solving problem #" << i << endl;
+			ostringstream fn_sout ;
+			fn_sout << "sudoku";
+			if (i < 10) fn_sout << "0";
+			fn_sout << i << ".txt";
+			read_file(fn_sout.str().data());
+			fn_sout << ".html";
+			HTML.close();
+			HTML.open(fn_sout.str());
+			ans[i] = rixia.init_and_feed_and_solve(data);
+		}
+		cout << "/****************************************************/" << endl;
+		for (int i = 1; i <= q_size; i++)
+		{
+			cout << "# " << i << " : " << ans[i] << endl;
+		}
+		cout << "/****************************************************/" << endl;
+	}
 
+
+};
 int main()
 {
+	AI_hw1 rixia;
+	rixia.main();
+	return 0;
+
 	PG_stat a;
 	//a.test();
 	PG_sudoku b;
@@ -1798,5 +1895,8 @@ int main()
 	//c.solve();
 	//return 0;
 	b.init();
+	b.init_input(b.ori);
 	b.solve();
+
+	//b.feed_and_solve();
 }
