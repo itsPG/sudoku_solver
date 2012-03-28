@@ -577,7 +577,7 @@ public:
 class PG_sudoku
 {
 public:
-	PG_stat ori;
+	PG_stat ori, ori_clear_list;
 	PG_combination C_9_2, C_9_3;
 	int result;
 	int field_x[3][9][9], field_y[3][9][9];
@@ -630,6 +630,7 @@ public:
 	void init()
 	{
 		ori.init();
+		ori_clear_list.init();
 		C_9_2.cal(9, 2);
 		C_9_3.cal(9, 3);
 		int in_x[9], in_y[9];
@@ -823,7 +824,7 @@ public:
 			}
 		}
 	}
-	bool basic_grid_erase_unit(PG_stat &target, int n)
+	bool basic_grid_erase_unit(PG_stat &target, PG_stat &target2, int n)
 	{
 		bool table[9][9] = {0};
 		int cnt[3][3] = {0};
@@ -867,16 +868,21 @@ public:
 					target.fill_and_eliminate(j, i, n);
 					flag = true;
 				}
+				if (table[i][j] == false && cnt[i/3][j/3] >= 5 && target.data[i][j] == 0 && target.flag[i][j][n])
+				{
+					target2.flag[i][j][n] = false;
+
+				}
 			}
 		}
 		return flag;
 	}
-	bool basic_grid_erase(PG_stat &target)
+	bool basic_grid_erase(PG_stat &target, PG_stat &target2)
 	{
 		bool flag = false;
 		for (int i = 0; i < 9; i++)
 		{
-			bool tmp = basic_grid_erase_unit(target, i);
+			bool tmp = basic_grid_erase_unit(target, target2, i);
 			if (tmp)
 			{
 				flag = true;
@@ -1696,7 +1702,7 @@ public:
 				MACRO_DO_SOLVE_CHK_AND_CONTI;
 			}
 
-			if (basic_grid_erase(ori)) {
+			if (basic_grid_erase(ori, ori_clear_list)) {
 				SKILL_LV[3]++;
 				MACRO_DO_SOLVE_CHK_AND_CONTI;
 			}
@@ -1704,7 +1710,25 @@ public:
 			if (single_candidature(ori)) {
 				if (additional_count == 0)
 				{
-					additional_count = ori.left() * 500;
+					int count = 0;
+					//additional_count = ori.left() * 500;
+					ori.clear_debug_flag();
+					for (int i = 0; i < 9; i++)
+					{
+						for (int j = 0; j < 9; j++)
+						{
+							for (int k = 0; k < 9; k++)
+							{
+								if (ori.flag[i][j][k] && ori_clear_list.flag[i][j][k])
+									{
+										ori.debug_flag_2[i][j][k] = true;
+										count++;
+									}
+							}
+						}
+					}
+					additional_count = count * 30;
+					HTML.add_stat(ori, "additional_count");
 				}
 				SKILL_LV[4]++;
 				MACRO_DO_SOLVE_CHK_AND_CONTI;
